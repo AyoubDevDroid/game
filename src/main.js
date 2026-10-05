@@ -4,7 +4,8 @@ import { createControls } from './controls.js';
 import { initAudio, sfx, startMusic, stopMusic, toggleMute, pauseAudio, resumeAudio } from './audio.js';
 import { vibre, pleinEcran, ecranAllume } from './mobile.js';
 import { createFanal } from './fanal.js';
-import { createWorld, createSky, makeGlowTexture, applyLight } from './world.js';
+import { createWorld, createSky, makeGlowTexture, animatePlanet } from './world.js';
+import { chargerModeles } from './modeles.js';
 
 // ---------- réglages du gameplay ----------
 const GRAVITY = 28, JUMP = 11.5, RUN = 7.5, ACC_GROUND = 14, ACC_AIR = 4;
@@ -15,18 +16,19 @@ const canvas = document.getElementById('gl');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x0b0d22);
 const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 1000);
 function resize() { renderer.setSize(innerWidth, innerHeight, false); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); }
 addEventListener('resize', resize); resize();
 
-scene.add(new THREE.HemisphereLight(0xaab8ff, 0x2c2242, 1.25));
-const sun = new THREE.DirectionalLight(0xfff2dd, 1.3); sun.position.set(30, 60, 25); scene.add(sun);
+scene.add(new THREE.HemisphereLight(0xffe2f4, 0x4a2f86, 1.35));
+const sun = new THREE.DirectionalLight(0xfff0dc, 1.6); sun.position.set(30, 60, 25); scene.add(sun);
+const fill = new THREE.DirectionalLight(0xb48cff, 0.6); fill.position.set(-40, -20, -30); scene.add(fill);
 
 const glow = makeGlowTexture();
-createSky(scene, glow);
-const planets = createWorld(scene, glow);
-const fanal = createFanal(glow);
+const sky = createSky(scene, glow);
+const modeles = await chargerModeles();          // modèles .glb de public/modeles (s'il y en a)
+const planets = createWorld(scene, glow, modeles);
+const fanal = createFanal(glow, modeles);
 scene.add(fanal.object);
 const controls = createControls();
 
@@ -69,7 +71,7 @@ const S = {
   flight: null,
 };
 const tmp = new THREE.Vector3(), tmp2 = new THREE.Vector3(), mat = new THREE.Matrix4();
-S.pos.copy(planets[0].center).add(new THREE.Vector3(0, planets[0].radius, 0));
+S.pos.copy(planets[0].surfacePoint(new THREE.Vector3(0, 1, 0)));
 
 // ---------- interface ----------
 const $ = id => document.getElementById(id);
@@ -100,13 +102,13 @@ function demarrer(n, temps) {
   initAudio(); pleinEcran(); ecranAllume(true);
   for (let k = 0; k < n; k++) {             // planètes déjà rallumées
     const p = planets[k];
-    p.lit = true; p.litT = 1; applyLight(p, 1); p.beacon.ready = true;
+    p.lit = true; p.litT = 1; p.setLight(1); p.beacon.ready = true;
     p.embers.forEach(e => { e.taken = true; e.holder.visible = false; S.power++; });
   }
   if (n > 0) {
     const p = planets[n];
     S.current = n; S.up.set(0, 1, 0);
-    S.pos.copy(p.center).addScaledVector(S.up, p.radius);
+    S.pos.copy(p.surfacePoint(S.up));
     S.camHeading.set(0, 0, -1); S.face.set(0, 0, 1);
     updateCamera(0, true);
   }
@@ -165,18 +167,18 @@ function updatePlayer(dt) {
   // sol
   const n = tmp2.copy(S.pos).sub(P.center);
   const dist = n.length(); n.normalize();
-  const snap = S.onGround && vr <= 0 ? 0.35 : 0;
-  if (dist <= P.radius + snap) {
-    S.pos.copy(P.center).addScaledVector(n, P.radius);
+  const snap = S.onGround && vr <= 0 ? 0.35 : 0, sol = P.surface(n);
+  if (dist <= sol + snap) {
+    S.pos.copy(P.center).addScaledVector(n, sol);
     const vrNow = S.vel.dot(n);
     if (vrNow < 0) S.vel.addScaledVector(n, -vrNow);
-    if (!S.onGround && vrNow < -8) { sfx.land(); vibre('moyen'); burst(S.pos, 6, 0xaab0d8, 2, n); }
+    if (!S.onGround && vrNow < -8) { sfx.land(); vibre('moyen'); fanal.land(); if (vrNow < -14) fanal.setMood('surpris', 0.6); burst(S.pos, 6, 0xffd6f0, 2, n); }
     S.onGround = true;
-  } else if (dist > P.radius + 0.4) S.onGround = false;
+  } else if (dist > sol + 0.4) S.onGround = false;
 
   // obstacles (phares) : on est repoussé sur le côté
   for (const o of P.obstacles) {
-    const base = tmp.copy(P.center).addScaledVector(o.dir, P.radius);
+    const base = P.surfacePoint(o.dir);
     const rel = S.pos.clone().sub(base);
     const h = rel.dot(o.dir);
     if (h > o.height) continue;
@@ -197,8 +199,8 @@ function updatePlayer(dt) {
 
 function respawn() {
   const P = planets[S.current];
-  S.pos.copy(P.center).addScaledVector(S.up.set(0, 1, 0), P.radius + 1);
-  S.vel.set(0, 0, 0); sfx.respawn();
+  S.pos.copy(P.surfacePoint(S.up.set(0, 1, 0))).addScaledVector(S.up, 1);
+  S.vel.set(0, 0, 0); sfx.respawn(); fanal.setMood('peur', 1.5);
 }
 
 function updateGame(dt) {
@@ -211,7 +213,7 @@ function updateGame(dt) {
     if (chest.distanceTo(e.holder.position) < 1.25) {
       e.taken = true; e.holder.visible = false; S.power++;
       const got = P.embers.filter(x => x.taken).length;
-      sfx.ember(got); vibre('leger'); burst(e.holder.position, 26, 0xffa040, 4);
+      sfx.ember(got); vibre('leger'); fanal.setMood('ravi', 0.9); burst(e.holder.position, 26, 0xffa040, 4);
       if (got === P.embers.length) {
         P.beacon.ready = true; sfx.ready();
         message('Toutes les braises !', 'Va rallumer le phare 🏮');
@@ -222,7 +224,7 @@ function updateGame(dt) {
 
   // rallumer le phare
   if (P.beacon.ready && !P.lit && chest.distanceTo(P.beacon.pos) < 2.2) {
-    P.lit = true; sfx.beacon(); vibre('fort');
+    P.lit = true; sfx.beacon(); vibre('fort'); fanal.setMood('super', 3);
     sauver(P.final ? null : { planete: S.current + 1, temps: Math.round(S.time) });
     burst(P.beacon.pos.clone().addScaledVector(P.beacon.dir, 3), 90, 0xffd27a, 9);
     if (P.final) {
@@ -243,12 +245,12 @@ function updateGame(dt) {
 function launch(from, to) {
   const start = S.pos.clone();
   const landDir = start.clone().sub(to.center).normalize();
-  const end = to.center.clone().addScaledVector(landDir, to.radius);
+  const end = to.surfacePoint(landDir);
   const mid = start.clone().add(end).multiplyScalar(0.5);
   const lift = from.tremplin.dir.clone().add(landDir).normalize().multiplyScalar(start.distanceTo(end) * 0.35);
   S.flight = { t: 0, curve: new THREE.QuadraticBezierCurve3(start, mid.add(lift), end), to };
   S.state = 'vol'; S.vel.set(0, 0, 0); S.onGround = false;
-  sfx.launch(); vibre('fort'); burst(start, 50, 0x9ff6ff, 7, from.tremplin.dir);
+  sfx.launch(); vibre('fort'); fanal.setMood('super', FLIGHT_TIME + 0.5); burst(start, 50, 0x9ff6ff, 7, from.tremplin.dir);
 }
 
 function updateFlight(dt) {
@@ -267,7 +269,7 @@ function updateFlight(dt) {
     projectOnPlane(S.camHeading.copy(S.face), S.up);
     if (S.camHeading.lengthSq() < 1e-4) S.camHeading.set(1, 0, 0).cross(S.up);
     S.camHeading.normalize();
-    sfx.land(); vibre('moyen'); startMusic(S.current); hud();
+    sfx.land(); vibre('moyen'); fanal.land(); fanal.setMood('ravi', 1.2); startMusic(S.current); hud();
     message(F.to.name, F.to.final ? 'Le dernier phare de l\'archipel' : 'Encore des braises à trouver…', 3000);
   }
 }
@@ -276,36 +278,12 @@ function updateFlight(dt) {
 let clock = 0;
 function animateWorld(dt) {
   clock += dt;
-  for (const p of planets) {
-    for (const e of p.embers) {
-      if (e.taken) continue;
-      e.inner.position.y = Math.sin(clock * 2.5 + e.phase) * 0.15;
-      e.gem.rotation.y += dt * 2;
-    }
-    const b = p.beacon;
-    if (p.lit) {
-      p.litT = Math.min(1, p.litT + dt / 2.2);
-      applyLight(p, p.litT);
-      b.lamp.emissiveIntensity = 2.2 + Math.sin(clock * 3) * 0.3;
-      b.halo.material.opacity = 0.9 * p.litT;
-      b.light.intensity = 60 * p.litT;
-    } else if (b.ready) {
-      b.lamp.emissiveIntensity = 0.6 + Math.sin(clock * 6) * 0.5;   // le phare clignote : « viens me rallumer »
-      b.halo.material.opacity = 0.25 + Math.sin(clock * 6) * 0.2;
-    }
-    if (p.tremplin && p.tremplin.active) {
-      const t = p.tremplin;
-      t.disc.emissiveIntensity = 1.2 + Math.sin(clock * 4) * 0.4;
-      t.swirl.material.opacity = 0.9;
-      t.swirl.rotation.z += dt * 3;
-      t.swirl.position.y = 0.35 + (clock * 1.2 % 1) * 1.6;
-      t.col.material.opacity = 0.55 + Math.sin(clock * 5) * 0.15;
-    }
-  }
+  for (const p of planets) animatePlanet(p, dt, clock);
 }
 
 // ---------- caméra ----------
 function updateCamera(dt, instant = false) {
+  if (S.camLibre) { camera.position.copy(S.camLibre.pos); camera.up.set(0, 1, 0); camera.lookAt(S.camLibre.cible); return; }   // vue libre (captures, écran titre)
   // en portrait, l'écran est étroit : on recule la caméra pour voir autour de Fanal
   const zoom = camera.aspect < 1 ? 1.25 + (1 - camera.aspect) * 0.9 : 1;
   const desired = S.pos.clone().addScaledVector(S.up, CAM_HEIGHT * zoom).addScaledVector(S.camHeading, -CAM_DIST * zoom);
@@ -351,6 +329,7 @@ function frame(now) {
   updateParts(dt);
   placeFanal(dt);
   updateCamera(dt);
+  sky.position.copy(camera.position);
   renderer.render(scene, camera);
 }
 updateCamera(0, true);

@@ -42,6 +42,20 @@ Planche de référence : [`docs/style/planche.png`](docs/style/planche.png). **C
 - **Collecte** : braises, puis phare à rallumer.
 - **Plus tard** : ennemis « Ombrelles » (petites ombres qui fuient la lumière), double saut, attaque de lumière, boss de fin d'archipel, pièces/cosmétiques.
 
+## Modes de jeu
+
+### Mode histoire (en cours)
+Fanal rallume les phares de l'archipel, planète après planète.
+
+### Multijoueur 3 contre 3 (idée validée, après le mode histoire)
+Deux équipes s'affrontent sur une planète : les **Gardiens** (lanternes, lumière) contre les **Ombrelles** (ombres, obscurité).
+
+- **Course aux cristaux** : récupérer le plus de cristaux et les rapporter à son phare avant la fin du temps.
+- **Conquête de territoire** : chaque équipe colore le sol en courant ; à la fin du chrono, l'équipe qui a la plus grande surface gagne. C'est la suite logique du jeu : la vague de couleur qui part du phare devient l'arme des Gardiens, l'ombre qui éteint devient celle des Ombrelles.
+- **Phares à capturer** : 3 phares sur la planète, chaque équipe doit les allumer (ou les éteindre) et les tenir.
+
+Étapes prévues : 1) version contre l'ordinateur (bots) pour régler le fun, 2) multijoueur sur le même Wi-Fi, 3) multijoueur en ligne (serveur de jeu, salons, classement).
+
 ## Commandes
 
 - **Téléphone** : joystick à gauche (n'importe où sur la moitié gauche de l'écran), bouton de saut à droite.

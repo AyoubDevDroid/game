@@ -54,6 +54,18 @@ Identifiant de l'appli : `com.sup762.astres`. Icône et écran de démarrage : `
 - **Sons et musique générés par le code** (aucun fichier audio, aucun droit d'auteur tiers).
 - Commandes clavier + tactiles, caméra adaptée au portrait et au paysage.
 
+## Brancher les modèles 3D (Meshy, Tripo…)
+
+Dépose les fichiers `.glb` dans `public/modeles/` avec ces noms, puis relance `npm run dev` : ils remplacent automatiquement les formes dessinées par le code.
+
+| Fichier | Remplace |
+|---|---|
+| `fanal.glb` | le corps de Fanal (globe **vide** : la flamme-visage reste celle du code) |
+| `phare.glb` | les phares |
+| `champignon.glb` · `maison.glb` · `cristal.glb` · `rocher.glb` · `touffe.glb` | les décors des planètes |
+
+Les tailles sont ajustées toutes seules. Prompts et réglages conseillés : [`docs/style/CONCEPTS.md`](docs/style/CONCEPTS.md).
+
 ## Organisation du code
 
 ```
@@ -63,8 +75,11 @@ android/          projet Android (Capacitor) — `npm run apk` le met à jour
 scripts/apk.js    fabrique l'APK de test ou l'AAB du Play Store
 ressources/       icône et écran de démarrage
 src/main.js       boucle de jeu : gravité, caméra, braises, phares, tremplins
-src/world.js      les planètes et leur contenu (liste LEVELS à modifier pour créer des niveaux)
-src/fanal.js      le héros (formes simples, à remplacer par un vrai modèle 3D plus tard)
+src/world.js      les planètes, leur relief, leurs décors et le ciel (liste LEVELS à modifier pour créer des niveaux)
+src/lumiere.js    l'effet « éteint → coloré » (vague de couleur depuis le phare, fissures de lave…)
+src/decor.js      champignons, maisons, cristaux, rochers dessinés par le code
+src/modeles.js    chargement des modèles .glb de public/modeles
+src/fanal.js      le héros et sa flamme-visage (5 expressions)
 src/controls.js   clavier, joystick tactile, bouton de saut
 src/audio.js      effets sonores et musique de synthèse
 src/mobile.js     vibrations, plein écran, écran toujours allumé
