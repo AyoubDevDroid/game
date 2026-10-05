@@ -26,7 +26,7 @@ Idées pour la suite : planètes de glace (on glisse), planètes-jardins (plante
 
 ## Le style visuel : « coloré avec du peps »
 
-Planche de référence : [`docs/style/planche.png`](docs/style/planche.png).
+Planche de référence : [`docs/style/planche.png`](docs/style/planche.png). **Concepts validés** (images finales du look) : [`docs/style/CONCEPTS.md`](docs/style/CONCEPTS.md).
 
 - **Low-poly acidulé** : formes simples à facettes, couleurs vives et saturées.
 - **Le contraste est le cœur du jeu** : une planète éteinte est **sombre, grise et fade** ; quand son phare se rallume, la couleur **se répand en vague** depuis le phare et tout devient éclatant. Ce passage du fade au coloré est la récompense principale du joueur.
