@@ -11,6 +11,7 @@ import { createOmbrelles } from './ombrelles.js';
 import { createGardien } from './gardien.js';
 import { createVaisseau } from './vaisseau.js';
 import { createCosmos } from './cosmos.js';
+import { chargerDecors } from './amenagement.js';
 import { GALAXIES, NB_GALAXIES, NB_PLANETES, planete, lireSauvegarde, nouvellePartie, sauver, cle, phareAllume } from './univers.js';
 
 // ---------- réglages du gameplay ----------
@@ -33,6 +34,7 @@ const fill = new THREE.DirectionalLight(0xb48cff, 0.6); fill.position.set(-40, -
 const glow = makeGlowTexture();
 const sky = createSky(scene, glow);
 const modeles = await chargerModeles();          // modèles .glb de public/modeles (s'il y en a)
+await chargerDecors();                           // objets 3D des planètes (public/decors, packs CC0)
 const fanal = createFanal(glow, modeles);
 scene.add(fanal.object);
 const vaisseau = createVaisseau(glow, modeles);
@@ -82,7 +84,7 @@ const S = {
 };
 let save = lireSauvegarde();
 let planet = null, gardien = null;
-const tmp = new THREE.Vector3(), tmp2 = new THREE.Vector3(), mat = new THREE.Matrix4();
+const tmp = new THREE.Vector3(), tmp2 = new THREE.Vector3(), tmp3 = new THREE.Vector3(), mat = new THREE.Matrix4();
 
 // ---------- interface ----------
 const $ = id => document.getElementById(id);
@@ -316,6 +318,30 @@ function updatePlayer(dt) {
     if (!S.onGround && vrNow < -8) { sfx.land(); vibre('moyen'); fanal.land(); if (vrNow < -14) fanal.setMood('surpris', 0.6); burst(S.pos, 6, 0xffd6f0, 2, n); }
     S.onGround = true; S.airJumps = 1;
   } else if (dist > sol + 0.4) S.onGround = false;
+
+  // objets solides (rochers, blocs, îlots flottants, troncs) : on monte dessus, ils bloquent sur le côté
+  for (const o of P.solides) {
+    const rel = tmp3.copy(S.pos).addScaledVector(o.dir, -P.surface(o.dir));
+    const h = rel.dot(o.dir);
+    if (h > o.haut + 0.6 || h + 1.6 < o.bas) continue;
+    projectOnPlane(rel, o.dir);
+    const d = rel.length(), rayon = o.radius + 0.3;
+    if (d > rayon) continue;
+    const vrO = S.vel.dot(o.dir);
+    if (h >= o.haut - 0.45) {
+      if (vrO > 0.5) continue;                                // il monte encore : on le laisse passer au-dessus
+      S.pos.addScaledVector(o.dir, o.haut - h);                // posé sur le dessus
+      if (vrO < 0) {
+        if (!S.onGround && vrO < -8) { sfx.land(); fanal.land(); burst(S.pos, 6, 0xffd6f0, 2, o.dir); }
+        S.vel.addScaledVector(o.dir, -vrO);
+      }
+      S.onGround = true; S.airJumps = 1;
+    } else if (o.bas > 0.2 && h < o.bas && vrO > 0) {
+      S.vel.addScaledVector(o.dir, -vrO);                      // la tête cogne le dessous d'un îlot
+    } else if (d > 1e-4) {
+      S.pos.addScaledVector(rel.normalize(), rayon - d);       // contre le côté
+    }
+  }
 
   // obstacles (phare, Luciole, cages) : on est repoussé sur le côté
   for (const o of P.obstacles) {

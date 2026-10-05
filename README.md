@@ -86,7 +86,9 @@ src/cosmos.js     l'univers en 3D : galaxie, planètes, choix de la destination,
 src/vaisseau.js   la Luciole
 src/gardien.js    les petits gardiens prisonniers et leur libération
 src/lumiere.js    l'effet « éteint → coloré » (vague de couleur depuis le phare, fissures de lave…)
-src/decor.js      champignons, maisons, cristaux, rochers dessinés par le code
+src/amenagement.js aménagement des planètes en objets 3D : ambiance par biome, escaliers, îlots flottants, cachettes, collisions
+src/decor.js      décors dessinés par le code (secours si les objets 3D ne se chargent pas)
+public/decors/    objets 3D des packs Kenney (CC0, voir CREDITS.md)
 src/modeles.js    chargement des modèles .glb de public/modeles
 src/fanal.js      le héros et sa flamme-visage (5 expressions)
 src/controls.js   clavier, joystick tactile, bouton de saut

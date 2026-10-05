@@ -7,6 +7,7 @@ import { allumable, uniformsPlanete, regleVague } from './lumiere.js';
 import { DECORS, MATIERES } from './decor.js';
 import { morceaux } from './modeles.js';
 import { rng } from './univers.js';
+import { amenager, decorsPrets } from './amenagement.js';
 
 // ---------- hasard reproductible et bruit (relief) ----------
 function randomDir(r) { const u = r() * 2 - 1, a = r() * Math.PI * 2, s = Math.sqrt(1 - u * u); return new THREE.Vector3(s * Math.cos(a), u, s * Math.sin(a)); }
@@ -184,30 +185,41 @@ export function createPlanet(scene, glow, modeles, L, allume = false) {
   planet.beacon = { group: phare, lamp: lampMat, halo, light, beam, beamMat, dir: bDir, pos: phare.position.clone(), ready: false, portee: 2.2 * echelle };
   planet.obstacles.push({ dir: bDir, radius: 0.7 * echelle, height: 3.9 * echelle });
 
-  // directions libres (le vaisseau se pose en haut, sur +Y)
-  const used = [Y.clone(), bDir.clone()];
+  // directions libres : chaque zone occupée a son propre rayon (en angle, pour une planète de rayon 9)
+  // le vaisseau se pose en haut (+Y) : grande zone dégagée autour de lui
+  const used = [{ d: Y.clone(), a: 0.6 }, { d: bDir.clone(), a: 0.8 }];
   const freeDir = minA => {
-    const cosMin = Math.cos(minA * k);
-    for (let n = 0; n < 300; n++) { const dd = randomDir(r); if (used.every(u => u.dot(dd) < cosMin)) return dd; }
+    for (let n = 0; n < 300; n++) { const dd = randomDir(r); if (used.every(u => u.d.angleTo(dd) > Math.max(minA, u.a) * k)) return dd; }
     return randomDir(r);
   };
-  planet.freeDir = (minA = 0.4) => { const dd = freeDir(minA); used.push(dd); return dd; };
+  const marquer = (d, a = 0.3) => used.push({ d: d.clone(), a });
+  planet.freeDir = (minA = 0.4) => { const dd = freeDir(minA); marquer(dd, minA); return dd; };
 
-  // ---- braises ----
+  // ---- aménagement en objets 3D : forêts, escaliers, îlots flottants, cachettes (amenagement.js) ----
+  planet.solides = [];
+  const avec3D = decorsPrets();
+  let coins = avec3D ? amenager({ L, r, k, center, U, group: planet.group, surfacePoint: planet.surfacePoint, freeDir, marquer, allumable, solides: planet.solides }) : [];
+  for (let i = coins.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [coins[i], coins[j]] = [coins[j], coins[i]]; }
+  coins = coins.slice(0, Math.ceil(L.embers * 0.6));
+
+  // ---- braises : d'abord dans les coins à explorer (sommets, îlots, cachettes), puis ailleurs ----
   planet.embers = [];
   for (let i = 0; i < L.embers; i++) {
-    const dd = freeDir(0.55); used.push(dd);
+    const coin = coins[i], dd = coin ? coin.dir : freeDir(0.55); marquer(dd, 0.3);
+    const hauteur = coin ? coin.h : 0.9;
     const gem = new THREE.Mesh(new THREE.OctahedronGeometry(0.26), new THREE.MeshBasicMaterial({ color: 0xffb347 }));
     const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: glow, color: 0xff8a3d, transparent: true, opacity: 0.85, depthWrite: false, blending: THREE.AdditiveBlending }));
     sp.scale.setScalar(1.5);
     const inner = new THREE.Group(); inner.add(gem, sp);
     const holder = new THREE.Group(); holder.add(inner);
-    placeOn(holder, dd, 0.9);
+    placeOn(holder, dd, hauteur);
     planet.group.add(holder);
     planet.embers.push({ holder, inner, gem, dir: dd, taken: false, phase: r() * 6 });
   }
+  if (!avec3D) decorsDessines();
 
-  // ---- décors : regroupés par matière (un seul objet par matière = rapide) ----
+  // ---- décors dessinés par le code (si les objets 3D n'ont pas pu être chargés) ----
+  function decorsDessines() {
   const lots = {};
   const ajoute = (cle, g) => (lots[cle] ||= []).push(g);
   const glb = { champiRose: 'champignon', champiJaune: 'champignon', maison: 'maison', cristalRose: 'cristal', cristalJaune: 'cristal', cristalBleu: 'cristal', rocher: 'rocher', touffe: 'touffe' };
@@ -219,7 +231,7 @@ export function createPlanet(scene, glow, modeles, L, allume = false) {
     const nb = Math.round(base * surface * (L.boss ? 0.6 : 1));
     for (let i = 0; i < nb; i++) {
       const dd = freeDir(type === 'touffe' ? 0.1 : 0.22);
-      if (type !== 'touffe') used.push(dd);
+      if (type !== 'touffe') marquer(dd, 0.22);
       const s = type === 'maison' ? 1 : 0.8 + r() * 0.5;
       Qy.setFromAxisAngle(Y, r() * Math.PI * 2);
       Qx.setFromUnitVectors(Y, dd).multiply(Qy);
@@ -246,6 +258,7 @@ export function createPlanet(scene, glow, modeles, L, allume = false) {
     mesh.position.copy(center);
     planet.group.add(mesh);
   }
+  }
 
   // ---- brume des planètes éteintes ----
   planet.brume = [];
@@ -270,7 +283,7 @@ export function createPlanet(scene, glow, modeles, L, allume = false) {
   planet.dispose = () => {
     scene.remove(planet.group);
     planet.group.traverse(o => {
-      if (o.geometry) o.geometry.dispose();
+      if (o.geometry && !o.userData.partage) o.geometry.dispose();
       if (o.material) (Array.isArray(o.material) ? o.material : [o.material]).forEach(m => m.dispose());
     });
   };

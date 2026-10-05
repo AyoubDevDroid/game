@@ -59,7 +59,8 @@ export function allumable(mat, U, { motif = 0, motifCol = 0xffffff, scale = 6 } 
     Object.assign(sh.uniforms, U, extra);
     sh.vertexShader = sh.vertexShader
       .replace('#include <common>', '#include <common>\nvarying vec3 vWP;')
-      .replace('#include <project_vertex>', '#include <project_vertex>\nvWP = (modelMatrix * vec4(transformed, 1.0)).xyz;');
+      // objets dupliqués (InstancedMesh) : leur position dans le monde passe aussi par instanceMatrix
+      .replace('#include <project_vertex>', '#include <project_vertex>\n#ifdef USE_INSTANCING\nvWP = (modelMatrix * instanceMatrix * vec4(transformed, 1.0)).xyz;\n#else\nvWP = (modelMatrix * vec4(transformed, 1.0)).xyz;\n#endif');
     sh.fragmentShader = sh.fragmentShader
       .replace('#include <common>', '#include <common>\n' + GLSL)
       .replace('#include <emissivemap_fragment>', FRAG);
