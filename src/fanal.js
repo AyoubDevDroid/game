@@ -61,12 +61,13 @@ function dessinerFlamme(humeur, avecVisage) {
   return new THREE.CanvasTexture(c);
 }
 
-export function createFanal(glowTexture, modeles = {}) {
+// opts : couleurs { cadre, foulard } et lumiere (false pour les petits gardiens : pas de lampe en plus à calculer)
+export function createFanal(glowTexture, modeles = {}, { cadre = 0xd8285f, foulard = 0x2fd3c4, lumiere = true } = {}) {
   const g = new THREE.Group();
   const corps = new THREE.Group(); g.add(corps);      // tout ce qui se dandine
-  const framboise = new THREE.MeshStandardMaterial({ color: 0xd8285f, roughness: 0.35, metalness: 0.1 });
+  const framboise = new THREE.MeshStandardMaterial({ color: cadre, roughness: 0.35, metalness: 0.1 });
   const or = new THREE.MeshStandardMaterial({ color: 0xffc23d, roughness: 0.25, metalness: 0.7 });
-  const lagon = new THREE.MeshStandardMaterial({ color: 0x2fd3c4, roughness: 0.75 });
+  const lagon = new THREE.MeshStandardMaterial({ color: foulard, roughness: 0.75 });
   const verre = new THREE.MeshStandardMaterial({ color: 0xffeef6, transparent: true, opacity: 0.22, roughness: 0.05, depthWrite: false });
   const add = (geo, mat, x, y, z, parent = corps) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); parent.add(m); return m; };
 
@@ -131,7 +132,7 @@ export function createFanal(glowTexture, modeles = {}) {
 
   const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture, color: 0xffa040, transparent: true, opacity: 0.5, depthWrite: false, blending: THREE.AdditiveBlending }));
   halo.scale.setScalar(2.3); halo.position.y = 0.9; corps.add(halo);
-  const light = new THREE.PointLight(0xffa040, 6, 9, 1.6); light.position.y = 0.9; g.add(light);
+  const light = new THREE.PointLight(0xffa040, 6, 9, 1.6); light.position.y = 0.9; if (lumiere) g.add(light);
 
   let humeur = 'content', retour = 0, t = 0, ecrase = 0, tour = 0;
   const appliquer = h => {

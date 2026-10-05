@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#0b0d22">
 <title>Astres éteints</title>
+<link rel="icon" href="data:,">
 <style>
   :root{--or:#ffc65a;--or2:#ff8a3d;--nuit:#0b0d22;--txt:#fff;--mut:#aab0d8}
   *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}
@@ -36,6 +37,39 @@
   .lanterne{font-size:64px;animation:flotte 3s ease-in-out infinite}
   @keyframes flotte{50%{transform:translateY(-10px)}}
   .mut{color:var(--mut);font-size:13px}
+  /* modes : on ne montre que les commandes utiles */
+  body:not([data-mode=jeu]) .hud, body:not([data-mode=jeu]) #aide, body:not([data-mode=jeu]) #saut{display:none!important}
+  #embarquer{position:fixed;left:50%;bottom:max(34px,env(safe-area-inset-bottom));transform:translateX(-50%);z-index:6}
+  #embarquer[hidden]{display:none}
+  #bossBarre{position:fixed;left:50%;top:max(70px,calc(env(safe-area-inset-top) + 58px));transform:translateX(-50%);width:min(320px,70vw);text-align:center;z-index:5;pointer-events:none;font-weight:900;font-size:13px;letter-spacing:.5px}
+  #bossBarre[hidden]{display:none}
+  #bossBarre>div{margin-top:4px;height:12px;border-radius:99px;background:rgba(10,12,35,.7);border:1px solid rgba(255,255,255,.2);overflow:hidden}
+  #bossVie{height:100%;width:100%;background:linear-gradient(90deg,#ff3d81,#ffc23d);transition:width .3s}
+  #trajetHud{position:fixed;top:max(14px,env(safe-area-inset-top));left:50%;transform:translateX(-50%);width:min(420px,80vw);z-index:5;display:none;gap:10px;align-items:center;pointer-events:none}
+  body[data-mode=trajet] #trajetHud{display:flex}
+  #trajetHud .barre{flex:1;height:10px;border-radius:99px;background:rgba(10,12,35,.7);overflow:hidden}
+  #trajetBarre{height:100%;width:0;background:linear-gradient(90deg,#7cf0ff,#ff8ad8)}
+  /* carte de la galaxie */
+  #carte{justify-content:flex-start;gap:10px;padding:max(16px,env(safe-area-inset-top)) 16px max(16px,env(safe-area-inset-bottom))}
+  #carte header{display:flex;align-items:center;justify-content:space-between;width:100%;max-width:640px;gap:8px}
+  #carte header h2{font-size:22px;line-height:1.1}
+  #carte header small{display:block;color:var(--mut);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px}
+  .rond{width:44px;height:44px;border-radius:50%;border:1px solid rgba(255,255,255,.25);background:rgba(10,12,35,.55);color:#fff;font-size:20px;font-weight:900;cursor:pointer;flex:none}
+  .rond:disabled{opacity:.25}
+  #carteStats{font-weight:800;font-size:14px;color:#ffe9b8}
+  #carteZone{position:relative;width:min(92vw,62vh,560px);aspect-ratio:1;flex:none}
+  #carteZone svg{position:absolute;inset:0;width:100%;height:100%}
+  #carteZone polyline{fill:none;stroke:rgba(255,255,255,.25);stroke-width:.4;stroke-dasharray:1.2 1.2}
+  .astre{position:absolute;width:40px;height:40px;margin:-20px;border-radius:50%;border:2px solid rgba(255,255,255,.35);background:radial-gradient(circle at 35% 30%,var(--c1),var(--c2));filter:grayscale(.85) brightness(.75);color:#fff;font-weight:900;font-size:15px;cursor:pointer;text-shadow:0 1px 3px #000}
+  .astre.allume{filter:none;box-shadow:0 0 18px var(--c1)}
+  .astre.boss{width:58px;height:58px;margin:-29px;font-size:22px;border-color:#ffc23d}
+  .astre.ferme{opacity:.45}
+  .astre.choisi{outline:3px solid #fff;outline-offset:3px}
+  .astre i{position:absolute;top:-22px;left:50%;transform:translateX(-50%);font-style:normal;font-size:18px}
+  #carteFiche{display:flex;flex-direction:column;align-items:center;gap:6px;min-height:96px;max-width:420px}
+  #carteFiche b{font-size:20px}
+  #carteFiche span{color:#d8dcff;font-size:14px}
+  .btn.petit{padding:12px 28px;font-size:17px}
 </style>
 </head>
 <body>
@@ -52,20 +86,35 @@
 <div id="aide">Flèches / ZQSD pour courir · Espace pour sauter (deux fois : double saut)</div>
 <div id="stick"><i></i></div>
 <button id="saut">SAUT</button>
+<button class="btn petit" id="embarquer" hidden>🚀 Embarquer</button>
+<div id="bossBarre" hidden>👑 GRANDE OMBRELLE<div><div id="bossVie"></div></div></div>
+<div id="trajetHud"><span class="pill">🚀</span><div class="barre"><div id="trajetBarre"></div></div><span class="pill">✨ <span id="trajetEclats">0</span></span></div>
+
+<section class="ecran" id="carte" hidden>
+  <header>
+    <button class="rond" id="cartePrec" aria-label="Galaxie précédente">‹</button>
+    <div><small id="carteNum">Galaxie 1 / 15</small><h2 id="carteNom">Archipel du Ciel</h2></div>
+    <button class="rond" id="carteSuiv" aria-label="Galaxie suivante">›</button>
+  </header>
+  <div id="carteStats"></div>
+  <div id="carteZone"></div>
+  <div id="carteFiche"></div>
+  <button class="rond" id="carteFermer" aria-label="Retour sur la planète" style="position:absolute;right:16px;bottom:max(16px,env(safe-area-inset-bottom))">✕</button>
+</section>
 
 <section class="ecran" id="titre">
   <div class="lanterne">🏮</div>
   <h1>Astres éteints</h1>
-  <p>Les phares de l'Archipel du Ciel se sont éteints. Aide <b>Fanal</b>, le petit gardien de phare, à ramasser les braises et à rallumer chaque planète.</p>
+  <p>Les phares de 15 galaxies se sont éteints et les petits gardiens sont prisonniers des Ombrelles. Embarque avec <b>Fanal</b> sur la Luciole, rallume les phares et libère tes amis !</p>
   <button class="btn" id="continuer" hidden>Continuer</button>
   <button class="btn" id="jouer">Jouer</button>
-  <span class="mut">Prototype 0.1 — graphismes provisoires</span>
+  <span class="mut">Version 0.2 — graphismes provisoires</span>
 </section>
 
 <section class="ecran" id="fin" hidden>
   <div class="lanterne">✨</div>
-  <h1>L'archipel brille !</h1>
-  <p>Fanal a rallumé le Grand Phare. La lumière revient sur l'Archipel du Ciel… pour l'instant.</p>
+  <h1>L'univers brille !</h1>
+  <p>Fanal a rallumé le dernier Grand Phare. La lumière revient dans les 15 galaxies… pour l'instant.</p>
   <p id="temps" class="mut"></p>
   <button class="btn" id="rejouer">Rejouer</button>
 </section>

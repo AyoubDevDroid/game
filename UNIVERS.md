@@ -4,9 +4,9 @@
 
 ## L'histoire
 
-Dans l'**Archipel du Ciel**, chaque petite planète a un **phare** qui éclaire la nuit. Une nuit, une grande ombre est passée : tous les phares se sont éteints, les planètes sont devenues grises et froides.
+Dans les **15 galaxies**, chaque planète a un **phare** qui éclaire la nuit. Une nuit, une grande ombre est passée : tous les phares se sont éteints, les planètes sont devenues grises et froides, et les Ombrelles ont enfermé les petits gardiens de phare dans des cages d'ombre.
 
-Il reste **Fanal**, le plus petit gardien de phare de l'archipel. Il voyage de planète en planète, ramasse les **braises** tombées au sol et rallume chaque phare. Quand un phare se rallume, la planète retrouve ses couleurs et un **tremplin d'aurore** apparaît : il propulse Fanal vers la planète suivante.
+Il reste **Fanal**, le plus petit gardien. À bord de sa **Luciole**, il voyage de planète en planète, ramasse les **braises** tombées au sol et rallume chaque phare. Quand un phare se rallume, la planète retrouve ses couleurs, la cage fond et le **petit gardien** prisonnier rejoint l'équipage de la Luciole.
 
 ## Le héros : Fanal
 
@@ -14,15 +14,19 @@ Il reste **Fanal**, le plus petit gardien de phare de l'archipel. Il voyage de p
 - Plus il ramasse de braises, plus sa flamme brille.
 - Caractère : courageux, un peu maladroit, il parle peu (des petits sons).
 
-## Les planètes (prototype)
+## Les 15 galaxies (src/univers.js)
 
-| # | Nom | Ambiance | Braises |
-|---|---|---|---|
-| 1 | **Brumelune** | Petite planète de brume et d'herbe bleue, pour apprendre à courir et sauter | 6 |
-| 2 | **Cendrine** | Planète de cendres et de cristaux, plus grande | 8 |
-| 3 | **Le Grand Phare** | Minuscule planète du phare principal : le rallumer termine le prototype | 5 |
+Archipel du Ciel · Nébuleuse Framboise · Spirale Menthe · Voile d'Ambre · Nuée Lagon · Couronne de Givre · Jardin des Comètes · Mer de Lucioles · Anneau Mandarine · Brume Violette · Ruche d'Étoiles · Cascade Aurore · Forge Céleste · Abysse Nacré · **Cœur de l'Ombre** (la dernière). Chacune a son ciel.
 
-Idées pour la suite : planètes de glace (on glisse), planètes-jardins (plantes rebondissantes), planètes creuses, petites lunes à sauter de l'une à l'autre.
+**15 planètes par galaxie**, générées à partir d'une graine (identiques à chaque partie) :
+- **Planètes 1 à 14** : rayon 15 à 26, un phare, 7 à 13 braises, des Ombrelles, un **petit gardien prisonnier**. 10 biomes : menthe, lave, étoilée, givre, verdoyance, dunes, corail, marais, lagon, volcan. Brumelune et Cendrine sont les deux premières.
+- **Planète 15 : le Grand Phare**, gardé par le **boss**, la **Grande Ombrelle** (ombrelle framboise, couronne de piquants dorés). Il faut l'écraser 3 fois (plus dans les galaxies lointaines) ; à chaque coup elle est sonnée puis accélère. Le Grand Phare rallumé **libère la galaxie** et ouvre la suivante.
+
+**Progression** : au départ, 3 planètes sont ouvertes ; chaque phare rallumé en ouvre une de plus. Le Grand Phare s'ouvre après **8 phares** rallumés dans la galaxie. Les Ombrelles sont plus nombreuses et plus rapides de galaxie en galaxie.
+
+**La Luciole** (le vaisseau) est garée sur chaque planète : « Embarquer » ouvre la **carte de la galaxie** (planètes en spirale). On choisit sa destination, puis **trajet** : on pilote la Luciole entre les astéroïdes (ralenti si on en touche un) et on ramasse les **éclats d'étoile** ✨ (monnaie gardée pour les futurs cosmétiques). Vers une autre galaxie : **saut hyperespace**.
+
+Idées pour la suite : planètes de glace (on glisse), planètes-jardins (plantes rebondissantes), planètes creuses, petites lunes à sauter de l'une à l'autre, un boss différent par galaxie, boutique de cosmétiques avec les éclats.
 
 ## Le style visuel : « coloré avec du peps »
 
