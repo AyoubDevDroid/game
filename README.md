@@ -17,7 +17,8 @@ Ouvrir l'adresse affichée (`http://localhost:5173`). Pour tester sur ton télé
 
 - **Ordinateur** : flèches ou ZQSD/WASD pour courir, Espace pour sauter (appuie une deuxième fois en l'air pour le double saut).
 - **Téléphone** : pouce gauche n'importe où sur la moitié gauche = joystick, bouton SAUT à droite.
-- **La Luciole** : près du vaisseau, bouton « Embarquer » (touche E au clavier). Pendant le trajet, le joystick ou les flèches pilotent.
+- **La Luciole** : une colonne de lumière et une flèche au bord de l'écran montrent où elle est garée. Près du vaisseau, bouton « Embarquer » (touche E) : décollage, puis l'univers en 3D (glisser pour tourner, pincer ou molette pour zoomer, toucher une planète puis « Y aller »). Le vol est automatique.
+- **Paysage** : le jeu se joue en mode paysage (verrouillé dans l'appli Android).
 
 `npm run build` fabrique la version finale dans `dist/`.
 
@@ -50,7 +51,7 @@ Identifiant de l'appli : `com.sup762.astres`. Icône et écran de démarrage : `
 - **15 galaxies de 15 planètes** (225 planètes générées) avec **gravité sphérique** : on fait le tour complet de chaque planète.
 - Braises à ramasser et phares à rallumer : la planète retrouve ses couleurs quand son phare se rallume, et le **petit gardien** prisonnier est libéré.
 - **Boss** sur la 15e planète de chaque galaxie : la Grande Ombrelle garde le Grand Phare.
-- **La Luciole** : carte de la galaxie, trajet piloté entre les astéroïdes, saut hyperespace entre galaxies.
+- **La Luciole** : univers en 3D (galaxie, orbites, planètes), vol automatique avec décollage et atterrissage, saut hyperespace entre galaxies.
 - Ennemis **Ombrelles**, double saut.
 - Héros animé (course, saut, clignement des yeux, flamme qui grandit avec les braises).
 - Particules, halo de lumière, ciel étoilé.
@@ -63,7 +64,8 @@ Dépose les fichiers `.glb` dans `public/modeles/` avec ces noms, puis relance `
 
 | Fichier | Remplace |
 |---|---|
-| `fanal.glb` | le corps de Fanal (globe **vide** : la flamme-visage reste celle du code) |
+| `fanal.glb` | Fanal. Modèle **riggé et animé** (Meshy, Mixamo…) : ses animations sont jouées toutes seules selon leur nom — `idle`/repos, `walk`/marche, `run`/course, `jump`/saut. Modèle fixe : le globe **vide**, la flamme-visage reste celle du code |
+| `vaisseau.glb` | la Luciole (nez vers +Z) |
 | `phare.glb` | les phares |
 | `champignon.glb` · `maison.glb` · `cristal.glb` · `rocher.glb` · `touffe.glb` | les décors des planètes |
 
@@ -80,8 +82,7 @@ ressources/       icône et écran de démarrage
 src/main.js       boucle de jeu : gravité, caméra, braises, phares ; enchaîne planète → carte → trajet
 src/univers.js    les 15 galaxies, les 10 biomes, la génération des planètes, la sauvegarde
 src/world.js      une planète (relief, phare, braises, décors, brume) et le ciel de la galaxie
-src/carte.js      la carte de la galaxie (choix de la destination)
-src/trajet.js     le trajet en vaisseau : astéroïdes, éclats d'étoile, hyperespace
+src/cosmos.js     l'univers en 3D : galaxie, planètes, choix de la destination, vol automatique, hyperespace
 src/vaisseau.js   la Luciole
 src/gardien.js    les petits gardiens prisonniers et leur libération
 src/lumiere.js    l'effet « éteint → coloré » (vague de couleur depuis le phare, fissures de lave…)

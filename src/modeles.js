@@ -2,7 +2,9 @@
 // Dépose un fichier dans public/modeles/ (ex. public/modeles/phare.glb) : au prochain lancement de
 // « npm run dev » ou « npm run build », il remplace automatiquement la version dessinée par le code.
 //
-// Noms reconnus : fanal · phare · champignon · maison · cristal · rocher · touffe
+// Noms reconnus : fanal · vaisseau · phare · champignon · maison · cristal · rocher · touffe
+// fanal.glb peut être un personnage riggé et animé (Meshy, Mixamo…) : ses animations sont jouées
+// selon leur nom — repos (idle), course (run), saut (jump). Voir fanal.js.
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 
@@ -13,7 +15,7 @@ const DISPONIBLES = typeof __MODELES__ !== 'undefined' ? __MODELES__ : [];
 export async function chargerModeles() {
   const loader = new GLTFLoader(), out = {};
   await Promise.all(DISPONIBLES.map(n =>
-    loader.loadAsync(`./modeles/${n}.glb`).then(g => { out[n] = g.scene; }).catch(e => console.warn('Modèle illisible :', n, e))));
+    loader.loadAsync(`./modeles/${n}.glb`).then(g => { g.scene.userData.animations = g.animations; out[n] = g.scene; }).catch(e => console.warn('Modèle illisible :', n, e))));
   return out;
 }
 

@@ -1,15 +1,18 @@
 // Le vaisseau de Fanal, « la Luciole » : coque framboise, hublot lagon, ailerons dorés, réacteur lumineux.
 // Même style que Fanal (docs/style). L'avant regarde vers +Z.
+// Si public/modeles/vaisseau.glb existe (nez vers +Z, roues/patins en bas), il remplace la version dessinée.
 import * as THREE from 'three';
+import { morceaux } from './modeles.js';
 
-export function createVaisseau(glow) {
+export function createVaisseau(glow, modeles = {}) {
   const g = new THREE.Group();
   const coque = new THREE.Group(); g.add(coque);            // tout ce qui tangue
+  const dessin = new THREE.Group(); coque.add(dessin);       // la version dessinée par le code
   const framboise = new THREE.MeshStandardMaterial({ color: 0xd8285f, roughness: 0.35, metalness: 0.1 });
   const creme = new THREE.MeshStandardMaterial({ color: 0xfff1df, roughness: 0.5 });
   const or = new THREE.MeshStandardMaterial({ color: 0xffc23d, roughness: 0.25, metalness: 0.7 });
   const verre = new THREE.MeshStandardMaterial({ color: 0x8feaff, transparent: true, opacity: 0.55, roughness: 0.05, emissive: 0x2fd3c4, emissiveIntensity: 0.4 });
-  const add = (geo, mat, x, y, z, parent = coque) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); parent.add(m); return m; };
+  const add = (geo, mat, x, y, z, parent = dessin) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); parent.add(m); return m; };
 
   // fuselage : capsule couchée, ventre crème
   const corps = add(new THREE.CapsuleGeometry(0.75, 1.5, 8, 20), framboise, 0, 0.9, 0); corps.rotation.x = Math.PI / 2;
@@ -34,6 +37,15 @@ export function createVaisseau(glow) {
   const tuyere = add(new THREE.CylinderGeometry(0.32, 0.42, 0.35, 16), or, 0, 0.9, -1.35); tuyere.rotation.x = Math.PI / 2;
   const feu = new THREE.Sprite(new THREE.SpriteMaterial({ map: glow, color: 0x7cf0ff, transparent: true, opacity: 0.9, depthWrite: false, blending: THREE.AdditiveBlending }));
   feu.position.set(0, 0.9, -1.7); coque.add(feu);
+
+  if (modeles.vaisseau) {
+    dessin.visible = false; lueur.visible = false;
+    const modele = new THREE.Group();
+    for (const { geo, mat } of morceaux(modeles.vaisseau, 2.2)) modele.add(new THREE.Mesh(geo, mat));
+    coque.add(modele);
+    const box = new THREE.Box3().setFromObject(modele);
+    feu.position.set(0, (box.min.y + box.max.y) / 2, box.min.z - 0.3);   // le réacteur à l'arrière du modèle
+  }
 
   let t = 0;
   return {

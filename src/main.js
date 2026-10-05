@@ -1,5 +1,5 @@
 // Astres éteints — boucle de jeu : planète (gravité sphérique, braises, phare, Ombrelles, gardien),
-// carte de la galaxie, trajet en vaisseau. 15 galaxies de 15 planètes (univers.js).
+// la Luciole (décollage, univers 3D, atterrissage). 15 galaxies de 15 planètes (univers.js).
 import * as THREE from 'three';
 import { createControls } from './controls.js';
 import { initAudio, sfx, startMusic, stopMusic, toggleMute, pauseAudio, resumeAudio } from './audio.js';
@@ -10,8 +10,7 @@ import { chargerModeles } from './modeles.js';
 import { createOmbrelles } from './ombrelles.js';
 import { createGardien } from './gardien.js';
 import { createVaisseau } from './vaisseau.js';
-import { createTrajet } from './trajet.js';
-import { createCarte } from './carte.js';
+import { createCosmos } from './cosmos.js';
 import { GALAXIES, NB_GALAXIES, NB_PLANETES, planete, lireSauvegarde, nouvellePartie, sauver, cle, phareAllume } from './univers.js';
 
 // ---------- réglages du gameplay ----------
@@ -36,10 +35,9 @@ const sky = createSky(scene, glow);
 const modeles = await chargerModeles();          // modèles .glb de public/modeles (s'il y en a)
 const fanal = createFanal(glow, modeles);
 scene.add(fanal.object);
-const vaisseau = createVaisseau(glow);
+const vaisseau = createVaisseau(glow, modeles);
 scene.add(vaisseau.object);
 const ombrelles = createOmbrelles(scene);
-const trajet = createTrajet(scene, glow, vaisseau);
 const controls = createControls();
 
 // ---------- particules (étincelles) ----------
@@ -76,7 +74,7 @@ function updateParts(dt) {
 // ---------- état ----------
 const Y = new THREE.Vector3(0, 1, 0);
 const S = {
-  state: 'titre',              // titre | jeu | carte | trajet | fin
+  state: 'titre',              // titre | jeu | decollage | cosmos | atterrissage | fin
   pos: new THREE.Vector3(), vel: new THREE.Vector3(),
   up: new THREE.Vector3(0, 1, 0), face: new THREE.Vector3(0, 0, 1), camHeading: new THREE.Vector3(0, 0, 1),
   onGround: false, airJumps: 1, coyote: 0, invuln: 0, power: 0, time: 0,
@@ -137,7 +135,7 @@ document.addEventListener('visibilitychange', () => {
 });
 $('son').onclick = () => { $('son').textContent = toggleMute() ? '🔇' : '🔊'; };
 
-// ---------- planètes : chargement, carte, trajet ----------
+// ---------- planètes : chargement ----------
 const projectOnPlane = (v, n) => v.addScaledVector(n, -v.dot(n));
 
 function decharger() {
@@ -146,8 +144,8 @@ function decharger() {
   planet = null; gardien = null;
 }
 
-// pose Fanal et la Luciole sur la planète (g, i)
-function charger(g, i) {
+// pose Fanal et la Luciole sur la planète (g, i) ; arrivee : la Luciole se pose en cinématique
+function charger(g, i, arrivee = false) {
   decharger();
   const L = planete(g, i), allume = phareAllume(save || nouvellePartie(), g, i);
   S.g = g; S.i = i;
@@ -156,9 +154,7 @@ function charger(g, i) {
   if (!allume) ombrelles.peupler(planet);
   gardien = !allume && L.gardien ? createGardien(glow, planet, L.gardien) : null;
   // la Luciole est garée en haut de la planète
-  scene.add(vaisseau.object);
-  planet.placeOn(vaisseau.object, Y, -0.1);
-  vaisseau.object.visible = true;
+  garerVaisseau();
   planet.obstacles.push({ dir: Y.clone(), radius: 1.3, height: 2.2 });
   // Fanal descend juste à côté, de profil : la Luciole reste visible sur le côté de l'écran
   const a = 3.4 / planet.radius;
@@ -169,52 +165,110 @@ function charger(g, i) {
   S.power = planet.embers.filter(e => e.taken).length;
   fanal.object.visible = true; fanal.setMood(allume ? 'content' : 'surpris', 1);
   if (save) { save.ici = { g, i }; save.galaxie = g; sauver(save); }
-  S.state = 'jeu'; modeInterface('jeu');
+  S.state = 'jeu'; modeInterface('jeu'); controls.setActif(true);
   startMusic(g * 3 + i);
   updateCamera(0, true);
   hud();
+  if (arrivee) atterrir();
 }
 
-const carte = createCarte({ onAller: aller });
-function ouvrirCarte() {
-  S.state = 'carte'; modeInterface('carte'); controls.reset();
-  carte.afficher(save, S.g, S.i);
+// ---------- la Luciole : décollage, univers 3D, atterrissage ----------
+const fondu = on => document.body.classList.toggle('fondu', on);   // voile blanc entre deux scènes
+const posVaisseau = new THREE.Vector3();
+function garerVaisseau() {
+  scene.add(vaisseau.object); vaisseau.object.scale.setScalar(1); vaisseau.object.visible = true;
+  planet.placeOn(vaisseau.object, Y, -0.1);
+  posVaisseau.copy(vaisseau.object.position);
 }
-$('embarquer').onclick = () => { if (S.state === 'jeu' && pretAEmbarquer()) { sfx.ready(); ouvrirCarte(); } };
-addEventListener('keydown', e => { if (e.code === 'KeyE') $('embarquer').onclick(); });
-$('carteFermer').onclick = () => { carte.cacher(); S.state = 'jeu'; modeInterface('jeu'); };
+const pretAEmbarquer = () => planet && S.pos.distanceTo(posVaisseau) < PORTEE_VAISSEAU;
 
-function aller(g, i) {
-  carte.cacher();
-  if (g === S.g && i === S.i) { S.state = 'jeu'; modeInterface('jeu'); return; }
-  const hyper = g !== S.g;
-  decharger();
-  fanal.object.visible = false;
-  sky.couleurs(GALAXIES[g].ciel, g * 0.7);
-  trajet.demarrer(planete(g, i), { hyper, densite: 0.35 + g * 0.05 });
-  S.state = 'trajet'; S.dest = { g, i }; modeInterface('trajet');
-  sfx.launch(); vibre('fort');
-  message(hyper ? 'Saut hyperespace !' : planete(g, i).nom, hyper ? GALAXIES[g].nom : 'Esquive les astéroïdes, attrape les éclats ✨', 2600);
+const cosmos = createCosmos({
+  scene, glow, camera, canvas, sky, vaisseau,
+  onArrivee: (g, i) => { cosmos.fermer(); charger(g, i, true); },
+  onFermer: () => { cosmos.fermer(); sky.couleurs(GALAXIES[S.g].ciel, S.g * 0.7); garerVaisseau(); atterrir(); },
+});
+
+// Fanal monte à bord, la Luciole décolle, puis l'univers s'ouvre
+function decoller() {
+  S.state = 'decollage'; S.anim = 0; modeInterface('cinematique'); controls.setActif(false);
+  S.depart = S.pos.clone();
+  sfx.ready(); vibre('moyen');
 }
-
-function updateTrajet(dt) {
-  controls.update();
-  for (const ev of trajet.update(dt, controls.move)) {
-    if (ev.type === 'coup') { sfx.touche(); vibre('fort'); burst(ev.pos, 24, 0xb48cff, 6); }
-    if (ev.type === 'eclat') { save.eclats++; sfx.ember(trajet.T.eclats); vibre('leger'); burst(ev.pos, 14, 0x9ff6ff, 4); }
-    if (ev.type === 'arrive') {
-      trajet.arreter(); sauver(save);
-      charger(S.dest.g, S.dest.i);
-      sfx.land(); vibre('moyen'); fanal.land();
-      message(planet.nom, planet.boss ? 'La Grande Ombrelle garde le Grand Phare ! Saute-lui dessus 👑' : 'Un petit gardien est prisonnier ici… Rallume le phare !', 3200);
-      return;
-    }
+function updateDecollage(dt) {
+  S.anim += dt;
+  const k = Math.min(1, S.anim / 0.5);
+  S.pos.copy(S.depart).lerp(posVaisseau.clone().addScaledVector(Y, 1), k);          // Fanal file dans le hublot
+  fanal.object.scale.setScalar(1 - k);
+  if (S.anim > 0.5) {
+    if (!S.lance) { S.lance = true; sfx.launch(); vibre('fort'); burst(posVaisseau, 40, 0x9ff6ff, 6, Y); }
+    const m = S.anim - 0.5;
+    vaisseau.object.position.copy(posVaisseau).addScaledVector(Y, m * m * 9);
+    vaisseau.animate(dt, 1, 0);
+    if (Math.random() < 0.7) burst(vaisseau.object.position, 2, 0x9ff6ff, 1.5);
   }
-  $('trajetBarre').style.width = (trajet.progression * 100) + '%';
-  $('trajetEclats').textContent = save.eclats;
+  if (S.anim > 1.6) fondu(true);
+  camera.lookAt(vaisseau.object.position);
+  if (S.anim > 2.0) {
+    S.lance = false; fanal.object.visible = false; fanal.object.scale.setScalar(1);
+    S.state = 'cosmos'; modeInterface('cosmos');
+    cosmos.ouvrir(save, S.g, S.i);
+    fondu(false);
+  }
 }
 
-const pretAEmbarquer = () => planet && S.pos.distanceTo(vaisseau.object.position) < PORTEE_VAISSEAU;
+// la Luciole descend du ciel et se pose, Fanal en sort
+function atterrir() {
+  S.state = 'atterrissage'; S.anim = 0; modeInterface('cinematique'); controls.setActif(false);
+  fanal.object.visible = false;
+  updateCamera(0, true);
+  setTimeout(() => fondu(false), 60);
+}
+function updateAtterrissage(dt) {
+  S.anim += dt;
+  const k = Math.min(1, S.anim / 1.8), h = Math.pow(1 - k, 3) * 28;
+  vaisseau.object.position.copy(posVaisseau).addScaledVector(Y, h);
+  vaisseau.animate(dt, 1 - k * 0.8, 0);
+  if (Math.random() < 0.5 && k < 1) burst(vaisseau.object.position, 2, 0x9ff6ff, 1.5);
+  camera.lookAt(vaisseau.object.position.clone().lerp(S.pos, 0.4));
+  if (S.anim > 1.8 && !S.pose) {
+    S.pose = true; sfx.land(); vibre('moyen'); burst(posVaisseau, 30, 0xffd6f0, 4, Y);
+    fanal.object.visible = true; fanal.land(); fanal.setMood('ravi', 1);
+  }
+  if (S.pose) fanal.object.scale.setScalar(Math.min(1, (S.anim - 1.8) / 0.3));
+  if (S.anim > 2.3) {
+    S.pose = false; fanal.object.scale.setScalar(1);
+    S.state = 'jeu'; modeInterface('jeu'); controls.setActif(true);
+    message(planet.nom, planet.lit ? 'Phare déjà rallumé ✓' : planet.boss ? 'La Grande Ombrelle garde le Grand Phare ! Saute-lui dessus 👑' : 'Un petit gardien est prisonnier ici… Rallume le phare !', 3200);
+  }
+}
+
+$('embarquer').onclick = () => { if (S.state === 'jeu' && pretAEmbarquer()) decoller(); };
+addEventListener('keydown', e => { if (e.code === 'KeyE') $('embarquer').onclick(); });
+
+// ---------- repère de la Luciole : colonne de lumière + flèche au bord de l'écran ----------
+const colonne = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.9, 60, 16, 1, true), new THREE.MeshBasicMaterial({ color: 0x7cf0ff, transparent: true, opacity: 0.22, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide }));
+colonne.geometry.translate(0, 30, 0);
+scene.add(colonne);
+function reperer(t) {
+  const voir = S.state === 'jeu' && planet;
+  colonne.visible = !!voir;
+  if (!voir) { $('versVaisseau').hidden = true; return; }
+  colonne.position.copy(posVaisseau); colonne.quaternion.setFromUnitVectors(Y, Y);
+  colonne.material.opacity = 0.16 + Math.sin(t * 3) * 0.06;
+  // flèche quand la Luciole est loin ou hors de l'écran
+  const d = S.pos.distanceTo(posVaisseau), p = posVaisseau.clone().addScaledVector(Y, 1.2).project(camera);
+  const derriere = p.z > 1, dedans = !derriere && Math.abs(p.x) < 0.9 && Math.abs(p.y) < 0.85;
+  const el = $('versVaisseau');
+  el.hidden = d < 8 || (dedans && d < 25);
+  if (el.hidden) return;
+  let x = p.x, y = p.y;
+  if (derriere) { x = -x; y = -y; }
+  const a = Math.atan2(y, x), m = Math.max(Math.abs(x) / 0.88, Math.abs(y) / 0.8, dedans ? 0 : 1);
+  if (!dedans) { x /= m; y /= m; }
+  el.style.left = ((x + 1) / 2 * innerWidth) + 'px'; el.style.top = ((1 - y) / 2 * innerHeight) + 'px';
+  el.querySelector('b').style.transform = `rotate(${-a}rad)`;
+  el.querySelector('span').textContent = Math.round(d) + ' m';
+}
 
 // ---------- logique sur la planète ----------
 function updatePlayer(dt) {
@@ -397,7 +451,7 @@ function updateOmbrelles(dt) {
 // ---------- caméra ----------
 function updateCamera(dt, instant = false) {
   if (S.camLibre) { camera.position.copy(S.camLibre.pos); camera.up.set(0, 1, 0); camera.lookAt(S.camLibre.cible); return; }   // vue libre (captures)
-  if (S.state === 'trajet') { trajet.camera(camera); return; }
+  if (S.state === 'cosmos' || S.state === 'decollage') return;   // caméra pilotée par l'univers / le décollage
   if (!planet) { camera.position.set(0, 0, 30); camera.lookAt(0, 0, 0); return; }
   // en portrait, l'écran est étroit : on recule la caméra pour voir autour de Fanal
   const zoom = camera.aspect < 1 ? 1.25 + (1 - camera.aspect) * 0.9 : 1;
@@ -411,7 +465,8 @@ function updateCamera(dt, instant = false) {
 function placeFanal(dt) {
   const o = fanal.object;
   o.position.copy(S.pos);
-  o.visible = S.state !== 'trajet' && (S.invuln <= 0 || Math.floor(S.invuln * 12) % 2 === 0);   // clignote après un coup
+  const cache = S.state === 'cosmos' || (S.state === 'atterrissage' && !S.pose);
+  o.visible = !cache && (S.invuln <= 0 || Math.floor(S.invuln * 12) % 2 === 0);   // clignote après un coup
   const z = S.face.clone(); projectOnPlane(z, S.up).normalize();
   const x = new THREE.Vector3().crossVectors(S.up, z).normalize();
   mat.makeBasis(x, S.up, z);
@@ -425,7 +480,7 @@ let last = performance.now(), clock = 0;
 // qualité automatique : si le téléphone peine, on baisse la résolution du rendu
 let qPix = Math.min(devicePixelRatio, 2), qT = 0, qN = 0;
 function qualite(rawDt) {
-  if ((S.state !== 'jeu' && S.state !== 'trajet') || rawDt > 0.25) return;
+  if ((S.state !== 'jeu' && S.state !== 'cosmos') || rawDt > 0.25) return;
   qT += rawDt; qN++;
   if (qT < 3) return;
   const fps = qN / qT; qT = 0; qN = 0;
@@ -439,14 +494,18 @@ function frame(now) {
   const dt = Math.min(1 / 30, raw);
   clock += dt;
   if (S.state === 'jeu') { S.time += dt; updatePlayer(dt); updateGame(dt); }
-  else if (S.state === 'trajet') { S.time += dt; updateTrajet(dt); }
   else if (S.state === 'titre') { S.camHeading.applyAxisAngle(S.up, dt * 0.25); }
-  if (planet) { animatePlanet(planet, dt, clock); updateOmbrelles(dt); }
-  if (S.state !== 'trajet' && planet) vaisseau.animate(dt, 0, 0);
+  if (planet && S.state !== 'cosmos') { animatePlanet(planet, dt, clock); updateOmbrelles(dt); }
+  if (S.state === 'jeu' || S.state === 'titre') vaisseau.animate(dt, 0, 0);
   if (S.state !== 'jeu') $('embarquer').hidden = true;
   updateParts(dt);
   placeFanal(dt);
   updateCamera(dt);
+  // cinématiques et univers : après la caméra, pour pouvoir la diriger
+  if (S.state === 'decollage') updateDecollage(dt);
+  else if (S.state === 'atterrissage') updateAtterrissage(dt);
+  else if (S.state === 'cosmos') cosmos.update(dt);
+  reperer(clock);
   sky.position.copy(camera.position);
   renderer.render(scene, camera);
 }
@@ -457,4 +516,4 @@ updateCamera(0, true);
 requestAnimationFrame(frame);
 
 // accès pour les tests automatiques
-window.__jeu = { S, get planet() { return planet; }, get save() { return save; }, ombrelles, trajet, aller, charger, ouvrirCarte };
+window.__jeu = { S, get planet() { return planet; }, get save() { return save; }, ombrelles, cosmos, charger, decoller };

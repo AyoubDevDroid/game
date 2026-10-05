@@ -24,7 +24,7 @@ Archipel du Ciel · Nébuleuse Framboise · Spirale Menthe · Voile d'Ambre · N
 
 **Progression** : au départ, 3 planètes sont ouvertes ; chaque phare rallumé en ouvre une de plus. Le Grand Phare s'ouvre après **8 phares** rallumés dans la galaxie. Les Ombrelles sont plus nombreuses et plus rapides de galaxie en galaxie.
 
-**La Luciole** (le vaisseau) est garée sur chaque planète : « Embarquer » ouvre la **carte de la galaxie** (planètes en spirale). On choisit sa destination, puis **trajet** : on pilote la Luciole entre les astéroïdes (ralenti si on en touche un) et on ramasse les **éclats d'étoile** ✨ (monnaie gardée pour les futurs cosmétiques). Vers une autre galaxie : **saut hyperespace**.
+**La Luciole** (le vaisseau) est garée sur chaque planète, signalée par une colonne de lumière et une flèche. « Embarquer » : Fanal monte à bord, la Luciole **décolle**, et l'**univers en 3D** s'ouvre (noyau lumineux, bras d'étoiles, orbites, les 15 planètes). On choisit sa destination : le **vol est automatique** (cinématique), puis la Luciole **se pose** et Fanal en sort. Vers une autre galaxie : **saut hyperespace**.
 
 Idées pour la suite : planètes de glace (on glisse), planètes-jardins (plantes rebondissantes), planètes creuses, petites lunes à sauter de l'une à l'autre, un boss différent par galaxie, boutique de cosmétiques avec les éclats.
 

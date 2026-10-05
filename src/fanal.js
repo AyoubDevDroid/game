@@ -80,8 +80,29 @@ export function createFanal(glowTexture, modeles = {}, { cadre = 0xd8285f, foula
     pieds.push(p);
   }
 
+  // personnage riggé et animé (fanal.glb avec animations) : on garde son squelette et on joue ses animations
+  const anime = modeles.fanal && modeles.fanal.userData.animations && modeles.fanal.userData.animations.length > 0 ? modeles.fanal : null;
+  let mixer = null, actions = {}, actuelle = null;
   let modeleCorps = null;
-  if (modeles.fanal) {
+  if (anime) {
+    const box = new THREE.Box3().setFromObject(anime), taille = box.getSize(new THREE.Vector3());
+    const s = 1.75 / Math.max(taille.y, 1e-6);
+    anime.scale.multiplyScalar(s);
+    anime.position.y -= box.min.y * s;
+    anime.traverse(o => { if (o.isMesh) o.frustumCulled = false; });
+    corps.add(anime);
+    pieds.forEach(p => (p.visible = false));
+    mixer = new THREE.AnimationMixer(anime);
+    const clips = anime.userData.animations;
+    const cherche = re => clips.find(c => re.test(c.name));
+    const choix = {
+      repos: cherche(/idle|repos|attente|stand|breath/i) || clips[0],
+      marche: cherche(/walk|marche/i),
+      course: cherche(/run|course|sprint|jog/i) || cherche(/walk|marche/i),
+      saut: cherche(/jump|saut|fall|chute/i),
+    };
+    for (const [nom, clip] of Object.entries(choix)) if (clip) actions[nom] = mixer.clipAction(clip);
+  } else if (modeles.fanal) {
     modeleCorps = new THREE.Group();
     for (const { geo, mat } of morceaux(modeles.fanal, 1.75)) modeleCorps.add(new THREE.Mesh(geo, mat));
     corps.add(modeleCorps);
@@ -134,6 +155,16 @@ export function createFanal(glowTexture, modeles = {}, { cadre = 0xd8285f, foula
   halo.scale.setScalar(2.3); halo.position.y = 0.9; corps.add(halo);
   const light = new THREE.PointLight(0xffa040, 6, 9, 1.6); light.position.y = 0.9; if (lumiere) g.add(light);
 
+  // le perso animé a son propre visage et sa tenue : on ne garde que la lueur de la flamme
+  if (anime) { echarpe.visible = false; pans.forEach(p => (p.visible = false)); flamme.visible = false; halo.position.y = 1.2; light.position.y = 1.2; }
+  const jouer = nom => {
+    const a = actions[nom] || actions.course || actions.repos;
+    if (!a || a === actuelle) return;
+    a.reset().fadeIn(0.18).play();
+    if (actuelle) actuelle.fadeOut(0.18);
+    actuelle = a;
+  };
+
   let humeur = 'content', retour = 0, t = 0, ecrase = 0, tour = 0;
   const appliquer = h => {
     humeur = h; faceMat.map = textures[h]; dosMat.map = dos[h];
@@ -156,6 +187,15 @@ export function createFanal(glowTexture, modeles = {}, { cadre = 0xd8285f, foula
       flamme.rotation.z = Math.sin(t * 7) * 0.05;
       halo.material.opacity = 0.42 + Math.min(power, 20) * 0.02 + Math.sin(t * 9) * 0.05;
       light.intensity = 5 + Math.min(power, 20) * 0.6;
+      if (mixer) {
+        // perso animé : repos, marche, course ou saut selon ce que fait Fanal
+        jouer(air ? 'saut' : speed > 0.55 ? 'course' : speed > 0.08 ? (actions.marche ? 'marche' : 'course') : 'repos');
+        if (actuelle && actuelle !== actions.repos && actuelle !== actions.saut) actuelle.timeScale = 0.7 + speed * 0.5;
+        mixer.update(dt);
+        tour = Math.max(0, tour - dt * 2.4);
+        corps.rotation.y = tour > 0 ? (1 - tour * tour) * Math.PI * 2 : 0;
+        return;
+      }
       // dandinement, saut, écrasement à l'atterrissage
       ecrase = Math.max(0, ecrase - dt * 5);
       const sq = air ? 1.07 : 1 - ecrase * 0.18;

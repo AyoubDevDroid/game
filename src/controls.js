@@ -5,7 +5,7 @@ export function createControls() {
   const move = { x: 0, y: 0 };
   const keys = new Set();
   let jumpQueued = false;
-  let stickId = null, origin = null;
+  let stickId = null, origin = null, actif = true;
   let touchMove = { x: 0, y: 0 };
   const stick = document.getElementById('stick');
   const knob = stick.querySelector('i');
@@ -34,7 +34,7 @@ export function createControls() {
 
   // Joystick : apparaît là où le pouce touche, sur la moitié gauche de l'écran
   addEventListener('pointerdown', e => {
-    if (e.pointerType === 'mouse' || stickId !== null || e.clientX > innerWidth * 0.55) return;
+    if (!actif || e.pointerType === 'mouse' || stickId !== null || e.clientX > innerWidth * 0.55) return;
     if (e.target.closest('button, .pill#son, .ecran')) return;
     stickId = e.pointerId; origin = { x: e.clientX, y: e.clientY };
     stick.style.display = 'block';
@@ -71,5 +71,7 @@ export function createControls() {
     },
     consumeJump() { const j = jumpQueued; jumpQueued = false; return j; },
     reset() { keys.clear(); jumpQueued = false; },
+    // hors des planètes (univers, cinématiques) : pas de joystick
+    setActif(v) { actif = v; if (!v) { stickId = null; touchMove = { x: 0, y: 0 }; stick.style.display = 'none'; keys.clear(); jumpQueued = false; } },
   };
 }
