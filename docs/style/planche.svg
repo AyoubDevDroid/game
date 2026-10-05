@@ -1,0 +1,171 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1100" width="1600" height="1100" font-family="Segoe UI, Roboto, sans-serif">
+<defs>
+  <linearGradient id="ciel" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2a1570"/><stop offset=".55" stop-color="#6a2fd8"/><stop offset="1" stop-color="#ff5fa2"/></linearGradient>
+  <radialGradient id="halo"><stop offset="0" stop-color="#ffe066" stop-opacity=".9"/><stop offset=".5" stop-color="#ff9f1c" stop-opacity=".35"/><stop offset="1" stop-color="#ff9f1c" stop-opacity="0"/></radialGradient>
+  <radialGradient id="verre" cx="40%" cy="35%" r="70%"><stop offset="0" stop-color="#fff" stop-opacity=".65"/><stop offset="1" stop-color="#bff6ff" stop-opacity=".25"/></radialGradient>
+  <radialGradient id="flamme" cx="50%" cy="65%" r="60%"><stop offset="0" stop-color="#fffbe6"/><stop offset=".4" stop-color="#ffd23f"/><stop offset="1" stop-color="#ff7a00"/></radialGradient>
+  <radialGradient id="flammeBleue" cx="50%" cy="65%" r="60%"><stop offset="0" stop-color="#f2fdff"/><stop offset=".45" stop-color="#7fe7ff"/><stop offset="1" stop-color="#3a7bff"/></radialGradient>
+  <radialGradient id="flammeRose" cx="50%" cy="65%" r="60%"><stop offset="0" stop-color="#fff0fb"/><stop offset=".45" stop-color="#ff8ad8"/><stop offset="1" stop-color="#ff3d81"/></radialGradient>
+  <linearGradient id="cadre" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff6b8b"/><stop offset="1" stop-color="#e0294f"/></linearGradient>
+  <linearGradient id="or" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe66d"/><stop offset="1" stop-color="#ffb000"/></linearGradient>
+  <filter id="lueur" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="8"/></filter>
+
+  <!-- Fanal de face : flamme-visage, cadre corail, écharpe turquoise -->
+  <g id="fanal">
+    <circle r="150" fill="url(#halo)"/>
+    <ellipse cx="-38" cy="138" rx="30" ry="16" fill="url(#or)"/><ellipse cx="38" cy="138" rx="30" ry="16" fill="url(#or)"/>
+    <rect x="-50" y="88" width="22" height="52" rx="11" fill="#3b1f5c"/><rect x="28" y="88" width="22" height="52" rx="11" fill="#3b1f5c"/>
+    <path d="M-92 70 h184 l-18 30 h-148 z" fill="url(#cadre)"/>
+    <circle r="112" fill="url(#verre)" stroke="#ffffff" stroke-opacity=".8" stroke-width="5"/>
+    <path d="M0 -78 C 50 -20 62 30 0 70 C -62 30 -50 -20 0 -78 z" fill="url(#flamme)"/>
+    <ellipse cx="-20" cy="2" rx="9" ry="13" fill="#3b1f5c"/><ellipse cx="20" cy="2" rx="9" ry="13" fill="#3b1f5c"/>
+    <circle cx="-17" cy="-3" r="3.5" fill="#fff"/><circle cx="23" cy="-3" r="3.5" fill="#fff"/>
+    <path d="M-14 26 q14 14 28 0" stroke="#3b1f5c" stroke-width="5" fill="none" stroke-linecap="round"/>
+    <circle cx="-34" cy="20" r="7" fill="#ff5fa2" opacity=".55"/><circle cx="34" cy="20" r="7" fill="#ff5fa2" opacity=".55"/>
+    <path d="M-80 -100 h160 l26 -38 h-212 z" fill="url(#cadre)"/>
+    <path d="M-44 -140 a44 44 0 0 1 88 0" stroke="url(#or)" stroke-width="13" fill="none"/>
+    <circle cy="-146" r="12" fill="url(#or)"/>
+    <path d="M-86 72 q-20 8 -34 40 q22 -6 30 6 q10 -24 22 -40 z" fill="#00d2ff"/>
+    <path d="M-100 76 h200" stroke="#00d2ff" stroke-width="14" stroke-linecap="round"/>
+  </g>
+</defs>
+
+<rect width="1600" height="1100" fill="url(#ciel)"/>
+<g fill="#fff" opacity=".9"><circle cx="90" cy="80" r="3"/><circle cx="420" cy="50" r="2.5"/><circle cx="760" cy="120" r="3"/><circle cx="1130" cy="60" r="2.5"/><circle cx="1500" cy="140" r="3"/><circle cx="1320" cy="300" r="2"/><circle cx="240" cy="330" r="2"/><circle cx="980" cy="330" r="2"/></g>
+
+<text x="60" y="88" font-size="54" font-weight="900" fill="#ffe66d">Astres éteints</text>
+<text x="62" y="128" font-size="24" font-weight="700" fill="#ffd6f0">Planche de style — « Coloré avec du peps » · low-poly acidulé</text>
+
+<!-- Palette -->
+<g transform="translate(60 170)">
+  <text font-size="22" font-weight="800" fill="#fff" y="0">Palette</text>
+  <g transform="translate(0 18)" font-size="15" font-weight="700" fill="#fff">
+    <rect width="86" height="86" rx="18" fill="#ffd23f"/><text y="110">Soleil</text>
+    <rect x="100" width="86" height="86" rx="18" fill="#ff7a00"/><text x="100" y="110">Mandarine</text>
+    <rect x="200" width="86" height="86" rx="18" fill="#ff3d81"/><text x="200" y="110">Framboise</text>
+    <rect x="300" width="86" height="86" rx="18" fill="#b44dff"/><text x="300" y="110">Raisin</text>
+    <rect x="400" width="86" height="86" rx="18" fill="#00d2ff"/><text x="400" y="110">Lagon</text>
+    <rect x="500" width="86" height="86" rx="18" fill="#3ee6a8"/><text x="500" y="110">Menthe</text>
+    <rect x="600" width="86" height="86" rx="18" fill="#a7f432"/><text x="600" y="110">Citron vert</text>
+    <rect x="700" width="86" height="86" rx="18" fill="#3b1f5c"/><text x="700" y="110">Nuit (contours)</text>
+  </g>
+</g>
+
+<!-- Fanal : 3 vues -->
+<g transform="translate(60 360)">
+  <text font-size="22" font-weight="800" fill="#fff">Fanal — la flamme est son visage</text>
+  <g transform="translate(150 220)"><use href="#fanal"/></g>
+  <text x="105" y="420" font-size="16" font-weight="700" fill="#ffd6f0">De face</text>
+  <!-- profil -->
+  <g transform="translate(430 220) scale(.78 1)"><use href="#fanal"/></g>
+  <path d="M352 290 q-50 10 -80 50 q40 -8 52 4" fill="#00d2ff"/>
+  <text x="385" y="420" font-size="16" font-weight="700" fill="#ffd6f0">Profil (écharpe au vent)</text>
+  <!-- dos -->
+  <g transform="translate(700 220)">
+    <circle r="150" fill="url(#halo)"/>
+    <ellipse cx="-38" cy="138" rx="30" ry="16" fill="url(#or)"/><ellipse cx="38" cy="138" rx="30" ry="16" fill="url(#or)"/>
+    <rect x="-50" y="88" width="22" height="52" rx="11" fill="#3b1f5c"/><rect x="28" y="88" width="22" height="52" rx="11" fill="#3b1f5c"/>
+    <path d="M-92 70 h184 l-18 30 h-148 z" fill="url(#cadre)"/>
+    <circle r="112" fill="url(#verre)" stroke="#fff" stroke-opacity=".8" stroke-width="5"/>
+    <path d="M0 -78 C 50 -20 62 30 0 70 C -62 30 -50 -20 0 -78 z" fill="url(#flamme)" opacity=".85"/>
+    <path d="M-80 -100 h160 l26 -38 h-212 z" fill="url(#cadre)"/>
+    <path d="M-44 -140 a44 44 0 0 1 88 0" stroke="url(#or)" stroke-width="13" fill="none"/>
+    <path d="M-100 76 h200" stroke="#00d2ff" stroke-width="14" stroke-linecap="round"/>
+    <path d="M10 80 q10 40 -6 70 l22 -4 q8 -36 2 -66 z" fill="#00d2ff"/>
+  </g>
+  <text x="670" y="420" font-size="16" font-weight="700" fill="#ffd6f0">De dos</text>
+</g>
+
+<!-- Expressions -->
+<g transform="translate(940 360)">
+  <text font-size="22" font-weight="800" fill="#fff">Expressions (la flamme change)</text>
+  <g transform="translate(70 120)">
+    <circle r="62" fill="url(#verre)" stroke="#fff" stroke-width="3"/>
+    <path d="M0 -50 C 34 -12 40 18 0 46 C -40 18 -34 -12 0 -50 z" fill="url(#flamme)"/>
+    <path d="M-17 -2 q6 -8 12 0 M5 -2 q6 -8 12 0" stroke="#3b1f5c" stroke-width="4" fill="none" stroke-linecap="round"/>
+    <path d="M-12 14 q12 14 24 0" stroke="#3b1f5c" stroke-width="4" fill="#ff3d81"/>
+    <text y="95" text-anchor="middle" font-size="15" font-weight="700" fill="#ffd6f0">Ravi</text>
+  </g>
+  <g transform="translate(220 120)">
+    <circle r="62" fill="url(#verre)" stroke="#fff" stroke-width="3"/>
+    <path d="M0 -58 C 40 -14 46 20 0 50 C -46 20 -40 -14 0 -58 z" fill="url(#flamme)"/>
+    <circle cx="-13" cy="-2" r="8" fill="#3b1f5c"/><circle cx="13" cy="-2" r="8" fill="#3b1f5c"/>
+    <ellipse cy="22" rx="6" ry="8" fill="#3b1f5c"/>
+    <text y="95" text-anchor="middle" font-size="15" font-weight="700" fill="#ffd6f0">Surpris</text>
+  </g>
+  <g transform="translate(370 120)">
+    <circle r="62" fill="url(#verre)" stroke="#fff" stroke-width="3"/>
+    <path d="M0 -34 C 24 -6 28 16 0 34 C -28 16 -24 -6 0 -34 z" fill="url(#flammeBleue)"/>
+    <ellipse cx="-11" cy="2" rx="5" ry="7" fill="#3b1f5c"/><ellipse cx="11" cy="2" rx="5" ry="7" fill="#3b1f5c"/>
+    <path d="M-9 20 q4 -4 9 0 q4 4 9 0" stroke="#3b1f5c" stroke-width="3" fill="none"/>
+    <text y="95" text-anchor="middle" font-size="15" font-weight="700" fill="#ffd6f0">A froid / peur</text>
+  </g>
+  <g transform="translate(520 120)">
+    <circle r="62" fill="url(#verre)" stroke="#fff" stroke-width="3"/>
+    <path d="M0 -54 C 38 -14 44 18 0 48 C -44 18 -38 -14 0 -54 z" fill="url(#flammeRose)"/>
+    <path d="M-16 -6 l10 6 l-10 6 M16 -6 l-10 6 l10 6" stroke="#3b1f5c" stroke-width="4" fill="none" stroke-linecap="round"/>
+    <path d="M-12 18 q12 12 24 0" stroke="#3b1f5c" stroke-width="4" fill="none" stroke-linecap="round"/>
+    <text y="95" text-anchor="middle" font-size="15" font-weight="700" fill="#ffd6f0">Super-lumière</text>
+  </g>
+  <text y="280" font-size="16" fill="#fff" font-weight="600">Plus il ramasse de braises, plus sa flamme</text>
+  <text y="304" font-size="16" fill="#fff" font-weight="600">grandit et éclaire le monde autour de lui.</text>
+</g>
+
+<!-- Planètes -->
+<g transform="translate(60 820)">
+  <text font-size="22" font-weight="800" fill="#fff">Planètes : éteintes → rallumées</text>
+  <!-- Brumelune éteinte / rallumée -->
+  <g transform="translate(90 140)">
+    <circle r="80" fill="#7c86a6"/><polygon points="-30,-74 -20,-110 -10,-76" fill="#9aa2bb"/><polygon points="20,-77 32,-104 40,-72" fill="#9aa2bb"/>
+    <text y="118" text-anchor="middle" font-size="15" font-weight="700" fill="#ffd6f0">Éteinte</text>
+  </g>
+  <text x="185" y="148" font-size="34" fill="#ffe66d" font-weight="900">→</text>
+  <g transform="translate(320 140)">
+    <circle r="96" fill="#3ee6a8" opacity=".25" filter="url(#lueur)"/>
+    <circle r="80" fill="#3ee6a8"/><path d="M-80 0 a80 80 0 0 0 160 0 z" fill="#21c48a"/>
+    <polygon points="-30,-74 -20,-112 -10,-76" fill="#b44dff"/><polygon points="20,-77 32,-106 40,-72" fill="#00d2ff"/>
+    <g transform="translate(-58 -52)"><rect x="-3" width="6" height="16" fill="#fff"/><ellipse rx="16" ry="9" fill="#ff3d81"/><circle cx="-6" cy="-2" r="2.5" fill="#fff"/><circle cx="5" cy="-4" r="2" fill="#fff"/></g>
+    <g transform="translate(60 -48)"><rect x="-3" width="6" height="14" fill="#fff"/><ellipse rx="13" ry="8" fill="#ffd23f"/></g>
+    <text y="118" text-anchor="middle" font-size="15" font-weight="700" fill="#ffd6f0">Brumelune</text>
+  </g>
+  <g transform="translate(560 140)">
+    <circle r="96" fill="#ff7a00" opacity=".25" filter="url(#lueur)"/>
+    <circle r="80" fill="#ff7a00"/><path d="M-80 0 a80 80 0 0 0 160 0 z" fill="#e85d00"/>
+    <polygon points="-40,-66 -30,-112 -18,-72" fill="#ff3d81"/><polygon points="-18,-74 -10,-100 -2,-78" fill="#ffd23f"/><polygon points="30,-74 46,-110 54,-62" fill="#ff3d81"/>
+    <text y="118" text-anchor="middle" font-size="15" font-weight="700" fill="#ffd6f0">Cendrine</text>
+  </g>
+  <g transform="translate(790 140)">
+    <circle r="96" fill="#7fe7ff" opacity=".3" filter="url(#lueur)"/>
+    <circle r="80" fill="#bff6ff"/><path d="M-80 0 a80 80 0 0 0 160 0 z" fill="#7fe7ff"/>
+    <path d="M-120 -90 q60 -40 120 0 q60 40 120 0" stroke="#b44dff" stroke-width="10" fill="none" opacity=".6"/>
+    <path d="M-110 -70 q60 -30 110 0 q60 30 110 0" stroke="#3ee6a8" stroke-width="8" fill="none" opacity=".6"/>
+    <polygon points="-20,-78 -6,-108 6,-79" fill="#fff"/>
+    <text y="118" text-anchor="middle" font-size="15" font-weight="700" fill="#ffd6f0">Givrelle (glace)</text>
+  </g>
+  <g transform="translate(1020 140)">
+    <circle r="96" fill="#a7f432" opacity=".3" filter="url(#lueur)"/>
+    <circle r="80" fill="#a7f432"/><path d="M-80 0 a80 80 0 0 0 160 0 z" fill="#7fd11b"/>
+    <g transform="translate(-30 -80)"><rect x="-3" y="0" width="6" height="22" fill="#21c48a"/><circle r="14" fill="#ff3d81"/><circle r="6" fill="#ffd23f"/></g>
+    <g transform="translate(26 -78)"><rect x="-3" y="0" width="6" height="18" fill="#21c48a"/><circle r="11" fill="#b44dff"/><circle r="5" fill="#ffd23f"/></g>
+    <text y="118" text-anchor="middle" font-size="15" font-weight="700" fill="#ffd6f0">Verdoyance (rebonds)</text>
+  </g>
+  <!-- phare -->
+  <g transform="translate(1270 150)">
+    <circle cy="-90" r="60" fill="url(#halo)"/>
+    <path d="M-22 40 L-14 -70 h28 L22 40 z" fill="#fff"/>
+    <rect x="-24" y="-20" width="48" height="14" fill="#ff3d81"/><rect x="-20" y="-50" width="40" height="12" fill="#ff3d81"/>
+    <circle cy="-86" r="18" fill="#ffd23f"/><path d="M-22 -100 l22 -26 l22 26 z" fill="#ff3d81"/>
+    <path d="M18 -90 L95 -125 L95 -60 z" fill="#ffe66d" opacity=".35"/>
+    <text y="68" text-anchor="middle" font-size="15" font-weight="700" fill="#ffd6f0">Phare rallumé</text>
+  </g>
+</g>
+
+<!-- Interface -->
+<g transform="translate(1390 830)">
+  <text font-size="22" font-weight="800" fill="#fff">Boutons</text>
+  <rect y="24" width="170" height="56" rx="18" fill="#c46a00"/><rect y="18" width="170" height="56" rx="18" fill="url(#or)"/>
+  <text x="85" y="54" text-anchor="middle" font-size="20" font-weight="900" fill="#3b1f5c">JOUER</text>
+  <circle cx="85" cy="160" r="46" fill="#c42a5c"/><circle cx="85" cy="154" r="46" fill="#ff3d81"/>
+  <text x="85" y="161" text-anchor="middle" font-size="17" font-weight="900" fill="#fff">SAUT</text>
+</g>
+</svg>

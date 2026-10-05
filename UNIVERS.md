@@ -24,6 +24,17 @@ Il reste **Fanal**, le plus petit gardien de phare de l'archipel. Il voyage de p
 
 Idées pour la suite : planètes de glace (on glisse), planètes-jardins (plantes rebondissantes), planètes creuses, petites lunes à sauter de l'une à l'autre.
 
+## Le style visuel : « coloré avec du peps »
+
+Planche de référence : [`docs/style/planche.png`](docs/style/planche.png).
+
+- **Low-poly acidulé** : formes simples à facettes, couleurs vives et saturées.
+- **Le contraste est le cœur du jeu** : une planète éteinte est **sombre, grise et fade** ; quand son phare se rallume, la couleur **se répand en vague** depuis le phare et tout devient éclatant. Ce passage du fade au coloré est la récompense principale du joueur.
+- **Palette** : Soleil `#ffd23f` · Mandarine `#ff7a00` · Framboise `#ff3d81` · Raisin `#b44dff` · Lagon `#00d2ff` · Menthe `#3ee6a8` · Citron vert `#a7f432` · Nuit `#3b1f5c` (contours et yeux).
+- **Ciel** : dégradé violet → rose, étoiles blanches.
+- **Fanal** : cadre framboise, poignée et pieds dorés, **écharpe lagon** qui flotte quand il court. **Sa flamme est son visage** : ravie, surprise, bleue quand il a froid ou peur, rose en super-lumière. Elle grandit avec les braises.
+- **Planètes** : Brumelune (menthe, champignons framboise et soleil), Cendrine (mandarine, cristaux framboise), Givrelle (glace lagon, aurores), Verdoyance (citron vert, fleurs qui font rebondir).
+
 ## Les mécaniques
 
 - **Gravité sphérique** : on court tout autour de chaque planète, le « haut » change en permanence.
