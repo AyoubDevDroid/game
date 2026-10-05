@@ -6,6 +6,7 @@ import { vibre, pleinEcran, ecranAllume } from './mobile.js';
 import { createFanal } from './fanal.js';
 import { createWorld, createSky, makeGlowTexture, animatePlanet } from './world.js';
 import { chargerModeles } from './modeles.js';
+import { createOmbrelles } from './ombrelles.js';
 
 // ---------- réglages du gameplay ----------
 const GRAVITY = 28, JUMP = 11.5, JUMP2 = 10, COYOTE = 0.12, RUN = 7.5, ACC_GROUND = 14, ACC_AIR = 4;
@@ -28,6 +29,7 @@ const glow = makeGlowTexture();
 const sky = createSky(scene, glow);
 const modeles = await chargerModeles();          // modèles .glb de public/modeles (s'il y en a)
 const planets = createWorld(scene, glow, modeles);
+const ombrelles = createOmbrelles(scene, planets);
 const fanal = createFanal(glow, modeles);
 scene.add(fanal.object);
 const controls = createControls();
@@ -67,7 +69,7 @@ const S = {
   state: 'titre',              // titre | jeu | vol | fin
   pos: new THREE.Vector3(), vel: new THREE.Vector3(),
   up: new THREE.Vector3(0, 1, 0), face: new THREE.Vector3(0, 0, 1), camHeading: new THREE.Vector3(0, 0, -1),
-  onGround: false, airJumps: 1, coyote: 0, planet: planets[0], current: 0, power: 0, time: 0,
+  onGround: false, airJumps: 1, coyote: 0, invuln: 0, planet: planets[0], current: 0, power: 0, time: 0,
   flight: null,
 };
 const tmp = new THREE.Vector3(), tmp2 = new THREE.Vector3(), mat = new THREE.Matrix4();
@@ -105,6 +107,7 @@ function demarrer(n, temps) {
     p.lit = true; p.litT = 1; p.setLight(1); p.beacon.ready = true;
     p.embers.forEach(e => { e.taken = true; e.holder.visible = false; S.power++; });
   }
+  for (const o of ombrelles.liste) if (o.P.index < n) { o.etat = 'fini'; o.g.visible = false; }
   if (n > 0) {
     const p = planets[n];
     S.current = n; S.up.set(0, 1, 0);
@@ -250,6 +253,37 @@ function updateGame(dt) {
   if (P.tremplin && P.tremplin.active && S.pos.distanceTo(P.tremplin.pos) < 1.3) launch(P, planets[S.current + 1]);
 }
 
+// ---------- Ombrelles ----------
+function updateOmbrelles(dt) {
+  S.invuln = Math.max(0, S.invuln - dt);
+  const evts = ombrelles.update(dt, { pos: S.pos, up: S.up, vel: S.vel, current: S.current, actif: S.state === 'jeu' });
+  for (const ev of evts) {
+    if (ev.type === 'repere') { sfx.repere(); fanal.setMood('surpris', 0.5); }
+    if (ev.type === 'balaye') burst(ev.pos, 20, 0xffd27a, 3);
+    if (ev.type === 'ecrase') {
+      // rebond sur l'Ombrelle : le saut en l'air est rechargé
+      projectOnPlane(S.vel, S.up).addScaledVector(S.up, JUMP * 0.85);
+      S.onGround = false; S.airJumps = 1;
+      sfx.ecrase(); vibre('moyen'); fanal.setMood('ravi', 0.8); burst(ev.pos, 30, 0xb48cff, 5);
+    }
+    if (ev.type === 'touche' && S.invuln <= 0) {
+      S.invuln = 1.6;
+      const recul = projectOnPlane(S.pos.clone().sub(ev.pos), S.up);
+      if (recul.lengthSq() < 1e-4) recul.copy(S.face).negate();
+      S.vel.copy(recul.normalize().multiplyScalar(9)).addScaledVector(S.up, 7); S.onGround = false;
+      sfx.touche(); vibre('fort'); fanal.setMood('peur', 1.4); burst(S.pos, 16, 0x5b2d8f, 3);
+      // l'Ombrelle souffle une braise, qui retourne à sa place
+      const P = planets[S.current], prise = P.lit ? null : P.embers.filter(e => e.taken).pop();
+      if (prise) {
+        prise.taken = false; prise.holder.visible = true; S.power--; P.beacon.ready = false;
+        burst(prise.holder.position, 20, 0xffa040, 3);
+        message('Une Ombrelle a soufflé une braise !', 'Elle est retournée à sa place', 2200);
+        hud();
+      }
+    }
+  }
+}
+
 function launch(from, to) {
   const start = S.pos.clone();
   const landDir = start.clone().sub(to.center).normalize();
@@ -305,6 +339,7 @@ function updateCamera(dt, instant = false) {
 function placeFanal(dt) {
   const o = fanal.object;
   o.position.copy(S.pos);
+  o.visible = S.invuln <= 0 || Math.floor(S.invuln * 12) % 2 === 0;   // clignote après un coup
   const z = S.face.clone(); projectOnPlane(z, S.up).normalize();
   const x = new THREE.Vector3().crossVectors(S.up, z).normalize();
   mat.makeBasis(x, S.up, z);
@@ -334,6 +369,7 @@ function frame(now) {
   else if (S.state === 'vol') { S.time += dt; updateFlight(dt); }
   else if (S.state === 'titre') { S.camHeading.applyAxisAngle(S.up, dt * 0.25); }
   animateWorld(dt);
+  updateOmbrelles(dt);
   updateParts(dt);
   placeFanal(dt);
   updateCamera(dt);
@@ -344,4 +380,4 @@ updateCamera(0, true);
 requestAnimationFrame(frame);
 
 // accès pour les tests automatiques
-window.__jeu = { S, planets, launch };
+window.__jeu = { S, planets, launch, ombrelles };

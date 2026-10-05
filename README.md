@@ -83,12 +83,13 @@ src/fanal.js      le héros et sa flamme-visage (5 expressions)
 src/controls.js   clavier, joystick tactile, bouton de saut
 src/audio.js      effets sonores et musique de synthèse
 src/mobile.js     vibrations, plein écran, écran toujours allumé
+src/ombrelles.js  ennemis Ombrelles : errance, poursuite, braise volée, écrasement
 ```
 
 ## Prochaines étapes
 
 1. Tester sur téléphone et régler les sensations (vitesse, saut, caméra).
-2. Ennemis « Ombrelles », double saut, vies et points de contrôle.
+2. Vies et points de contrôle (Ombrelles et double saut : faits).
 3. Vrais graphismes : modèle 3D de Fanal (Blender) et décors par planète.
 4. Plus de planètes et de mécaniques (glace, plantes rebondissantes, petites lunes).
 5. Version iPhone (il faudra un Mac et un compte développeur Apple).

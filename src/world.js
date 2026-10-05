@@ -8,21 +8,21 @@ import { morceaux } from './modeles.js';
 
 export const LEVELS = [
   {
-    name: 'Brumelune', center: [0, 0, 0], radius: 8, seed: 3, embers: 6,
+    name: 'Brumelune', center: [0, 0, 0], radius: 8, seed: 3, embers: 6, ombrelles: 2,
     beacon: [0.15, 0.1, 1], tremplin: [-0.5, 0.15, 0.85],
     relief: 0.55, freq: 1.3, bosse: { h: 1.2, w: 0.42 },
     sol: { bas: 0x34bf8f, base: 0x5fe0b0, haut: 0x9af2cc, bosse: 0x6fe6b8 }, motif: 1, motifCol: 0xffffff, herbe: 0x2aa77a,
     decors: [['champiRose', 12], ['champiJaune', 9], ['maison', 3], ['touffe', 34], ['rocher', 5]],
   },
   {
-    name: 'Cendrine', center: [46, 20, -26], radius: 11, seed: 11, embers: 8,
+    name: 'Cendrine', center: [46, 20, -26], radius: 11, seed: 11, embers: 8, ombrelles: 4,
     beacon: [-0.6, 0.6, 0.5], tremplin: [-0.2, 0.75, 0.6],
     relief: 0.8, freq: 1.1, bosse: { h: 2.4, w: 0.36 },
     sol: { bas: 0xd9601f, base: 0xff8a3d, haut: 0xffad66, bosse: 0x7a4a3a }, motif: 2, motifCol: 0xffd23f, scale: 3.6, herbe: 0xb8471a,
     decors: [['cristalRose', 16], ['cristalJaune', 12], ['rocher', 12]],
   },
   {
-    name: 'Le Grand Phare', center: [8, 54, -66], radius: 6, seed: 21, embers: 5, final: true,
+    name: 'Le Grand Phare', center: [8, 54, -66], radius: 6, seed: 21, embers: 5, ombrelles: 3, final: true,
     beacon: [0.2, 1, 0.2], tremplin: null,
     relief: 0.4, freq: 1.5, bosse: { h: 0.9, w: 0.5 },
     sol: { bas: 0x8f6ee6, base: 0xb89cff, haut: 0xdcccff, bosse: 0xc7b2ff }, motif: 3, motifCol: 0xfff2a8, scale: 5, herbe: 0x7a58d6,
