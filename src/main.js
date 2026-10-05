@@ -1,7 +1,8 @@
 // Astres éteints — boucle de jeu : gravité sphérique, caméra, braises, phares, tremplins.
 import * as THREE from 'three';
 import { createControls } from './controls.js';
-import { initAudio, sfx, startMusic, stopMusic, toggleMute } from './audio.js';
+import { initAudio, sfx, startMusic, stopMusic, toggleMute, pauseAudio, resumeAudio } from './audio.js';
+import { vibre, pleinEcran, ecranAllume } from './mobile.js';
 import { createFanal } from './fanal.js';
 import { createWorld, createSky, makeGlowTexture, applyLight } from './world.js';
 
@@ -85,13 +86,45 @@ function hud() {
   const got = p.embers.filter(e => e.taken).length;
   $('braises').textContent = p.lit ? '✓ phare rallumé' : `${got} / ${p.embers.length}`;
 }
-$('jouer').onclick = () => {
-  initAudio(); startMusic(0);
-  $('titre').hidden = true; S.state = 'jeu'; S.time = 0;
+// ---------- sauvegarde : on reprend à la dernière planète atteinte ----------
+const SAVE = 'astres_eteints_sauvegarde';
+const lireSauvegarde = () => { try { return JSON.parse(localStorage.getItem(SAVE)) || null; } catch { return null; } };
+const sauver = d => { try { d ? localStorage.setItem(SAVE, JSON.stringify(d)) : localStorage.removeItem(SAVE); } catch {} };
+const sauvegarde = lireSauvegarde();
+if (sauvegarde && sauvegarde.planete > 0 && sauvegarde.planete < planets.length) {
+  $('continuer').hidden = false;
+  $('continuer').textContent = `Continuer — ${planets[sauvegarde.planete].name}`;
+  $('jouer').textContent = 'Nouvelle partie';
+}
+function demarrer(n, temps) {
+  initAudio(); pleinEcran(); ecranAllume(true);
+  for (let k = 0; k < n; k++) {             // planètes déjà rallumées
+    const p = planets[k];
+    p.lit = true; p.litT = 1; applyLight(p, 1); p.beacon.ready = true;
+    p.embers.forEach(e => { e.taken = true; e.holder.visible = false; S.power++; });
+  }
+  if (n > 0) {
+    const p = planets[n];
+    S.current = n; S.up.set(0, 1, 0);
+    S.pos.copy(p.center).addScaledVector(S.up, p.radius);
+    S.camHeading.set(0, 0, -1); S.face.set(0, 0, 1);
+    updateCamera(0, true);
+  }
+  startMusic(n);
+  $('titre').hidden = true; S.state = 'jeu'; S.time = temps || 0;
   hud();
-  message('Brumelune', 'Ramasse les braises 🔥 pour rallumer le phare', 3500);
-};
-$('rejouer').onclick = () => location.reload();
+  message(planets[n].name, n ? 'Encore des braises à trouver…' : 'Ramasse les braises 🔥 pour rallumer le phare', 3500);
+}
+$('jouer').onclick = () => { sauver(null); demarrer(0); };
+$('continuer').onclick = () => demarrer(sauvegarde.planete, sauvegarde.temps);
+$('rejouer').onclick = () => { sauver(null); location.reload(); };
+
+// appli mise en arrière-plan (appel, autre appli…) : tout se met en pause
+let enPause = false;
+document.addEventListener('visibilitychange', () => {
+  enPause = document.hidden;
+  if (enPause) { pauseAudio(); controls.reset(); } else { resumeAudio(); last = performance.now(); }
+});
 $('son').onclick = () => { $('son').textContent = toggleMute() ? '🔇' : '🔊'; };
 
 // ---------- outils ----------
@@ -125,7 +158,7 @@ function updatePlayer(dt) {
   const target = wish.clone().multiplyScalar(RUN * mag);
   vt.lerp(target, 1 - Math.exp(-(S.onGround ? ACC_GROUND : ACC_AIR) * dt));
   vr -= GRAVITY * dt;
-  if (controls.consumeJump() && S.onGround) { vr = JUMP; S.onGround = false; sfx.jump(); burst(S.pos, 8, 0xbfd0ff, 2, up); }
+  if (controls.consumeJump() && S.onGround) { vr = JUMP; S.onGround = false; sfx.jump(); vibre('leger'); burst(S.pos, 8, 0xbfd0ff, 2, up); }
   S.vel.copy(vt).addScaledVector(up, vr);
   S.pos.addScaledVector(S.vel, dt);
 
@@ -137,7 +170,7 @@ function updatePlayer(dt) {
     S.pos.copy(P.center).addScaledVector(n, P.radius);
     const vrNow = S.vel.dot(n);
     if (vrNow < 0) S.vel.addScaledVector(n, -vrNow);
-    if (!S.onGround && vrNow < -8) { sfx.land(); burst(S.pos, 6, 0xaab0d8, 2, n); }
+    if (!S.onGround && vrNow < -8) { sfx.land(); vibre('moyen'); burst(S.pos, 6, 0xaab0d8, 2, n); }
     S.onGround = true;
   } else if (dist > P.radius + 0.4) S.onGround = false;
 
@@ -178,7 +211,7 @@ function updateGame(dt) {
     if (chest.distanceTo(e.holder.position) < 1.25) {
       e.taken = true; e.holder.visible = false; S.power++;
       const got = P.embers.filter(x => x.taken).length;
-      sfx.ember(got); burst(e.holder.position, 26, 0xffa040, 4);
+      sfx.ember(got); vibre('leger'); burst(e.holder.position, 26, 0xffa040, 4);
       if (got === P.embers.length) {
         P.beacon.ready = true; sfx.ready();
         message('Toutes les braises !', 'Va rallumer le phare 🏮');
@@ -189,10 +222,11 @@ function updateGame(dt) {
 
   // rallumer le phare
   if (P.beacon.ready && !P.lit && chest.distanceTo(P.beacon.pos) < 2.2) {
-    P.lit = true; sfx.beacon();
+    P.lit = true; sfx.beacon(); vibre('fort');
+    sauver(P.final ? null : { planete: S.current + 1, temps: Math.round(S.time) });
     burst(P.beacon.pos.clone().addScaledVector(P.beacon.dir, 3), 90, 0xffd27a, 9);
     if (P.final) {
-      S.state = 'fin';
+      S.state = 'fin'; ecranAllume(false);
       setTimeout(() => { sfx.victory(); stopMusic(); $('temps').textContent = `Temps : ${Math.floor(S.time / 60)} min ${String(Math.floor(S.time % 60)).padStart(2, '0')} s`; $('fin').hidden = false; }, 2200);
       message('Le Grand Phare brille !', '', 2200);
     } else {
@@ -214,7 +248,7 @@ function launch(from, to) {
   const lift = from.tremplin.dir.clone().add(landDir).normalize().multiplyScalar(start.distanceTo(end) * 0.35);
   S.flight = { t: 0, curve: new THREE.QuadraticBezierCurve3(start, mid.add(lift), end), to };
   S.state = 'vol'; S.vel.set(0, 0, 0); S.onGround = false;
-  sfx.launch(); burst(start, 50, 0x9ff6ff, 7, from.tremplin.dir);
+  sfx.launch(); vibre('fort'); burst(start, 50, 0x9ff6ff, 7, from.tremplin.dir);
 }
 
 function updateFlight(dt) {
@@ -233,7 +267,7 @@ function updateFlight(dt) {
     projectOnPlane(S.camHeading.copy(S.face), S.up);
     if (S.camHeading.lengthSq() < 1e-4) S.camHeading.set(1, 0, 0).cross(S.up);
     S.camHeading.normalize();
-    sfx.land(); startMusic(S.current); hud();
+    sfx.land(); vibre('moyen'); startMusic(S.current); hud();
     message(F.to.name, F.to.final ? 'Le dernier phare de l\'archipel' : 'Encore des braises à trouver…', 3000);
   }
 }
@@ -295,8 +329,21 @@ function placeFanal(dt) {
 
 // ---------- boucle ----------
 let last = performance.now();
+// qualité automatique : si le téléphone peine, on baisse la résolution du rendu
+let qPix = Math.min(devicePixelRatio, 2), qT = 0, qN = 0;
+function qualite(rawDt) {
+  if (S.state !== 'jeu' || rawDt > 0.25) return;
+  qT += rawDt; qN++;
+  if (qT < 3) return;
+  const fps = qN / qT; qT = 0; qN = 0;
+  if (fps < 45 && qPix > 0.75) { qPix = Math.max(0.75, qPix - 0.5); renderer.setPixelRatio(qPix); resize(); }
+}
+
 function frame(now) {
-  const dt = Math.min(1 / 30, (now - last) / 1000); last = now;
+  requestAnimationFrame(frame);
+  if (enPause) return;
+  const raw = (now - last) / 1000; last = now; qualite(raw);
+  const dt = Math.min(1 / 30, raw);
   if (S.state === 'jeu') { S.time += dt; updatePlayer(dt); updateGame(dt); }
   else if (S.state === 'vol') { S.time += dt; updateFlight(dt); }
   else if (S.state === 'titre') { S.camHeading.applyAxisAngle(S.up, dt * 0.25); }
@@ -305,7 +352,6 @@ function frame(now) {
   placeFanal(dt);
   updateCamera(dt);
   renderer.render(scene, camera);
-  requestAnimationFrame(frame);
 }
 updateCamera(0, true);
 requestAnimationFrame(frame);

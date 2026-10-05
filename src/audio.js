@@ -73,4 +73,7 @@ export function startMusic(mood = 0) {
   step();
   musicTimer = setInterval(step, 420);
 }
+// Application en arrière-plan : on coupe le son, puis on le reprend
+export function pauseAudio() { if (ctx) ctx.suspend().catch(() => {}); }
+export function resumeAudio() { if (ctx) ctx.resume().catch(() => {}); }
 export function stopMusic() { clearInterval(musicTimer); musicTimer = null; }

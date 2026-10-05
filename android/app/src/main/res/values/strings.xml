@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Astres éteints</string>
+    <string name="title_activity_main">Astres éteints</string>
+    <string name="package_name">com.sup762.astres</string>
+    <string name="custom_url_scheme">com.sup762.astres</string>
+</resources>

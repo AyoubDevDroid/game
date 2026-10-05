@@ -1,0 +1,7 @@
+{
+  "appId": "com.sup762.astres",
+  "appName": "Astres éteints",
+  "webDir": "dist",
+  "android": { "backgroundColor": "#0b0d22" },
+  "plugins": { "SystemBars": { "style": "DARK" } }
+}

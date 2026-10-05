@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <defs>
+    <radialGradient id="ciel" cx="50%" cy="38%" r="75%"><stop offset="0" stop-color="#3a2f7a"/><stop offset="0.6" stop-color="#16163d"/><stop offset="1" stop-color="#0b0d22"/></radialGradient>
+    <radialGradient id="halo" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#ffd27a" stop-opacity=".95"/><stop offset=".35" stop-color="#ff9a3d" stop-opacity=".45"/><stop offset="1" stop-color="#ff8a3d" stop-opacity="0"/></radialGradient>
+    <radialGradient id="verre" cx="45%" cy="40%" r="60%"><stop offset="0" stop-color="#fff6dc" stop-opacity=".55"/><stop offset="1" stop-color="#ffcf80" stop-opacity=".18"/></radialGradient>
+    <radialGradient id="flamme" cx="50%" cy="60%" r="55%"><stop offset="0" stop-color="#fffbe8"/><stop offset=".45" stop-color="#ffd166"/><stop offset="1" stop-color="#ff8a3d"/></radialGradient>
+    <linearGradient id="planete" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5fd8ad"/><stop offset="1" stop-color="#2b7d70"/></linearGradient>
+    <linearGradient id="bronze" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#c58a4a"/><stop offset="1" stop-color="#7a4a22"/></linearGradient>
+  </defs>
+  <rect width="1024" height="1024" fill="url(#ciel)"/>
+  <g fill="#fff">
+    <circle cx="150" cy="170" r="5"/><circle cx="830" cy="140" r="6"/><circle cx="890" cy="360" r="4"/><circle cx="110" cy="420" r="4"/>
+    <circle cx="260" cy="90" r="3"/><circle cx="700" cy="250" r="3"/><circle cx="330" cy="280" r="3"/><circle cx="930" cy="560" r="3"/><circle cx="70" cy="620" r="3"/>
+  </g>
+  <ellipse cx="512" cy="1180" rx="640" ry="420" fill="url(#planete)"/>
+  <circle cx="512" cy="500" r="330" fill="url(#halo)"/>
+  <!-- Fanal -->
+  <g transform="translate(512 520)">
+    <ellipse cx="-62" cy="230" rx="44" ry="26" fill="url(#bronze)"/>
+    <ellipse cx="62" cy="230" rx="44" ry="26" fill="url(#bronze)"/>
+    <rect x="-80" y="150" width="30" height="80" rx="15" fill="#2a1d14"/>
+    <rect x="50" y="150" width="30" height="80" rx="15" fill="#2a1d14"/>
+    <path d="M-150 120 h300 l-30 50 h-240 z" fill="url(#bronze)"/>
+    <circle cx="0" cy="0" r="190" fill="url(#verre)" stroke="#ffe3a6" stroke-opacity=".6" stroke-width="8"/>
+    <path d="M0 -120 C 70 -40 85 40 0 95 C -85 40 -70 -40 0 -120 z" fill="url(#flamme)"/>
+    <ellipse cx="-62" cy="-30" rx="24" ry="34" fill="#2a1d14"/><ellipse cx="62" cy="-30" rx="24" ry="34" fill="#2a1d14"/>
+    <circle cx="-54" cy="-42" r="9" fill="#fff"/><circle cx="70" cy="-42" r="9" fill="#fff"/>
+    <path d="M-30 30 q30 24 60 0" stroke="#2a1d14" stroke-width="10" fill="none" stroke-linecap="round"/>
+    <path d="M-120 -170 h240 l40 -60 h-320 z" fill="url(#bronze)"/>
+    <path d="M-70 -230 a70 70 0 0 1 140 0" stroke="url(#bronze)" stroke-width="22" fill="none"/>
+    <circle cx="0" cy="-238" r="20" fill="#c58a4a"/>
+  </g>
+</svg>

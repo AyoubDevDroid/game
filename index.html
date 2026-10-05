@@ -31,6 +31,7 @@
   .ecran h1{font-size:44px;line-height:1;letter-spacing:1px;background:linear-gradient(180deg,#fff3c4,var(--or) 55%,var(--or2));-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 4px 18px rgba(255,170,60,.35))}
   .ecran p{max-width:420px;line-height:1.55;color:#d8dcff;font-size:16px}
   .btn{border:none;border-radius:18px;padding:16px 38px;font-size:19px;font-weight:900;color:#2a1700;background:linear-gradient(135deg,var(--or),var(--or2));box-shadow:0 6px 0 #a5520f,0 0 40px rgba(255,160,60,.35);cursor:pointer}
+  .btn[hidden]{display:none}
   .btn:active{transform:translateY(4px);box-shadow:0 2px 0 #a5520f}
   .lanterne{font-size:64px;animation:flotte 3s ease-in-out infinite}
   @keyframes flotte{50%{transform:translateY(-10px)}}
@@ -56,6 +57,7 @@
   <div class="lanterne">🏮</div>
   <h1>Astres éteints</h1>
   <p>Les phares de l'Archipel du Ciel se sont éteints. Aide <b>Fanal</b>, le petit gardien de phare, à ramasser les braises et à rallumer chaque planète.</p>
+  <button class="btn" id="continuer" hidden>Continuer</button>
   <button class="btn" id="jouer">Jouer</button>
   <span class="mut">Prototype 0.1 — graphismes provisoires</span>
 </section>
