@@ -133,7 +133,7 @@ export function createFanal(glowTexture, modeles = {}) {
   halo.scale.setScalar(2.3); halo.position.y = 0.9; corps.add(halo);
   const light = new THREE.PointLight(0xffa040, 6, 9, 1.6); light.position.y = 0.9; g.add(light);
 
-  let humeur = 'content', retour = 0, t = 0, ecrase = 0;
+  let humeur = 'content', retour = 0, t = 0, ecrase = 0, tour = 0;
   const appliquer = h => {
     humeur = h; faceMat.map = textures[h]; dosMat.map = dos[h];
     halo.material.color.setHex(HUMEURS[h].lumiere); light.color.setHex(HUMEURS[h].lumiere);
@@ -143,7 +143,9 @@ export function createFanal(glowTexture, modeles = {}) {
     object: g,
     // change d'expression ; duree en secondes, puis retour à « content » (0 = permanent)
     setMood(h, duree = 0) { if (HUMEURS[h]) { appliquer(h); retour = duree; } },
-    land() { ecrase = 1; },
+    land() { ecrase = 1; tour = 0; },
+    // pirouette du double saut
+    spin() { tour = 1; },
     // speed : vitesse au sol (0 à 1), air : en l'air, power : nombre de braises (fait grandir la flamme)
     animate(dt, speed, air, power) {
       t += dt;
@@ -159,6 +161,8 @@ export function createFanal(glowTexture, modeles = {}) {
       corps.scale.set(2 - sq, sq, 2 - sq);
       corps.rotation.z = air ? 0 : Math.sin(t * 15) * 0.1 * speed;
       corps.position.y = air ? 0 : Math.abs(Math.sin(t * 15)) * 0.07 * speed;
+      tour = Math.max(0, tour - dt * 2.4);
+      corps.rotation.y = tour > 0 ? (1 - tour * tour) * Math.PI * 2 : 0;
       const pas = air ? 0 : Math.sin(t * 15) * 0.7 * speed;
       pieds[0].rotation.x = air ? -0.5 : pas; pieds[1].rotation.x = air ? 0.4 : -pas;
       // l'écharpe flotte vers l'arrière quand il court ou saute

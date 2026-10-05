@@ -47,6 +47,7 @@ const note = (base, step) => base * Math.pow(2, (PENTA[((step % 5) + 5) % 5] + 1
 
 export const sfx = {
   jump: () => tone({ freq: 300, to: 620, type: 'square', dur: 0.16, vol: 0.07 }),
+  jump2: () => { tone({ freq: 520, to: 1040, type: 'square', dur: 0.14, vol: 0.06 }); tone({ freq: 1040, to: 1560, type: 'triangle', dur: 0.18, vol: 0.08, delay: 0.05 }); },
   land: () => tone({ freq: 140, to: 70, type: 'sine', dur: 0.12, vol: 0.18 }),
   ember: n => { tone({ freq: note(523, n), type: 'triangle', dur: 0.25, vol: 0.2 }); tone({ freq: note(523, n + 2), type: 'sine', dur: 0.3, vol: 0.12, delay: 0.06 }); },
   ready: () => [0, 2, 4, 5].forEach((s, i) => tone({ freq: note(392, s), type: 'triangle', dur: 0.35, vol: 0.16, delay: i * 0.09 })),

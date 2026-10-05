@@ -15,7 +15,7 @@ npm run dev
 
 Ouvrir l'adresse affichée (`http://localhost:5173`). Pour tester sur ton téléphone : même Wi-Fi que l'ordinateur, puis ouvrir l'adresse « Network » affichée par la commande.
 
-- **Ordinateur** : flèches ou ZQSD/WASD pour courir, Espace pour sauter.
+- **Ordinateur** : flèches ou ZQSD/WASD pour courir, Espace pour sauter (appuie une deuxième fois en l'air pour le double saut).
 - **Téléphone** : pouce gauche n'importe où sur la moitié gauche = joystick, bouton SAUT à droite.
 
 `npm run build` fabrique la version finale dans `dist/`.

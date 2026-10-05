@@ -8,7 +8,7 @@ import { createWorld, createSky, makeGlowTexture, animatePlanet } from './world.
 import { chargerModeles } from './modeles.js';
 
 // ---------- réglages du gameplay ----------
-const GRAVITY = 28, JUMP = 11.5, RUN = 7.5, ACC_GROUND = 14, ACC_AIR = 4;
+const GRAVITY = 28, JUMP = 11.5, JUMP2 = 10, COYOTE = 0.12, RUN = 7.5, ACC_GROUND = 14, ACC_AIR = 4;
 const FLIGHT_TIME = 2.6, CAM_DIST = 7.5, CAM_HEIGHT = 3.2;
 
 // ---------- rendu ----------
@@ -67,7 +67,7 @@ const S = {
   state: 'titre',              // titre | jeu | vol | fin
   pos: new THREE.Vector3(), vel: new THREE.Vector3(),
   up: new THREE.Vector3(0, 1, 0), face: new THREE.Vector3(0, 0, 1), camHeading: new THREE.Vector3(0, 0, -1),
-  onGround: false, planet: planets[0], current: 0, power: 0, time: 0,
+  onGround: false, airJumps: 1, coyote: 0, planet: planets[0], current: 0, power: 0, time: 0,
   flight: null,
 };
 const tmp = new THREE.Vector3(), tmp2 = new THREE.Vector3(), mat = new THREE.Matrix4();
@@ -160,7 +160,15 @@ function updatePlayer(dt) {
   const target = wish.clone().multiplyScalar(RUN * mag);
   vt.lerp(target, 1 - Math.exp(-(S.onGround ? ACC_GROUND : ACC_AIR) * dt));
   vr -= GRAVITY * dt;
-  if (controls.consumeJump() && S.onGround) { vr = JUMP; S.onGround = false; sfx.jump(); vibre('leger'); burst(S.pos, 8, 0xbfd0ff, 2, up); }
+  // saut, puis double saut en l'air (petit délai de grâce juste après avoir quitté le sol)
+  S.coyote = S.onGround ? COYOTE : Math.max(0, S.coyote - dt);
+  if (controls.consumeJump()) {
+    if (S.onGround || S.coyote > 0) {
+      vr = JUMP; S.onGround = false; S.coyote = 0; sfx.jump(); vibre('leger'); burst(S.pos, 8, 0xbfd0ff, 2, up);
+    } else if (S.airJumps > 0) {
+      S.airJumps--; vr = Math.max(vr, JUMP2); sfx.jump2(); vibre('leger'); fanal.spin(); burst(S.pos, 18, 0xff8ad8, 3, up);
+    }
+  }
   S.vel.copy(vt).addScaledVector(up, vr);
   S.pos.addScaledVector(S.vel, dt);
 
@@ -173,7 +181,7 @@ function updatePlayer(dt) {
     const vrNow = S.vel.dot(n);
     if (vrNow < 0) S.vel.addScaledVector(n, -vrNow);
     if (!S.onGround && vrNow < -8) { sfx.land(); vibre('moyen'); fanal.land(); if (vrNow < -14) fanal.setMood('surpris', 0.6); burst(S.pos, 6, 0xffd6f0, 2, n); }
-    S.onGround = true;
+    S.onGround = true; S.airJumps = 1;
   } else if (dist > sol + 0.4) S.onGround = false;
 
   // obstacles (phares) : on est repoussé sur le côté
