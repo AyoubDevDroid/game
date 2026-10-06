@@ -53,6 +53,7 @@ export const sfx = {
   touche: () => { tone({ freq: 330, to: 110, type: 'sawtooth', dur: 0.35, vol: 0.08 }); tone({ freq: 260, to: 90, type: 'triangle', dur: 0.4, vol: 0.1, delay: 0.05 }); },
   land: () => tone({ freq: 140, to: 70, type: 'sine', dur: 0.12, vol: 0.18 }),
   piece: n => { tone({ freq: note(784, n % 10), type: 'sine', dur: 0.12, vol: 0.13 }); tone({ freq: note(784, (n % 10) + 4), type: 'triangle', dur: 0.14, vol: 0.07, delay: 0.04 }); },
+  parole: () => tone({ freq: 520 + Math.random() * 260, type: 'triangle', dur: 0.05, vol: 0.035 }),
   tir: () => { tone({ freq: 180, to: 90, type: 'square', dur: 0.2, vol: 0.08 }); noise({ dur: 0.18, vol: 0.06, from: 600, to: 200 }); },
   onde: () => { tone({ freq: 1400, to: 300, type: 'sawtooth', dur: 0.4, vol: 0.05 }); noise({ dur: 0.4, vol: 0.05, from: 4000, to: 9000 }); },
   pique: () => tone({ freq: 900, to: 400, type: 'square', dur: 0.12, vol: 0.07 }),

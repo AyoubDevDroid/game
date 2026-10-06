@@ -42,7 +42,7 @@ const MB = { blanc: new THREE.MeshBasicMaterial({ color: 0xffffff }), noir: new 
 for (const m of Object.values(MB)) m.userData.partage = true;
 
 // un habitant (dessiné par le code) ; renvoie { g, corps, bras, bouche, … }
-function habitant(peuple, r) {
+export function habitant(peuple, r) {
   const lam = c => new THREE.MeshLambertMaterial({ color: c });
   const mCorps = lam(peuple.corps), mDeco = lam(peuple.deco);
   const g = new THREE.Group(), corps = new THREE.Group(); g.add(corps);

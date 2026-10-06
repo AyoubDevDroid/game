@@ -1,15 +1,21 @@
-// Commandes : clavier (ordinateur) + joystick et bouton tactiles (téléphone).
-// Lecture : controls.move = {x, y} entre -1 et 1 (y = avancer), controls.consumeJump() = true une fois par appui.
+// Commandes : clavier (ordinateur) + joystick et boutons tactiles (téléphone).
+// Lecture : controls.move = {x, y} entre -1 et 1 (y = avancer) ; controls.consume('saut' | 'coup' | 'tir' | 'eclair')
+// = true une fois par appui ; controls.tenu('saut') = le bouton est maintenu (pour planer).
+//   Clavier : flèches / ZQSD / WASD, Espace = saut, F = coup de flamme, G = tir de braise, H = décharge électrique
+
+const TOUCHES = {
+  Space: 'saut', KeyF: 'coup', KeyX: 'coup', KeyJ: 'coup', KeyG: 'tir', KeyC: 'tir', KeyK: 'tir', KeyH: 'eclair', KeyV: 'eclair', KeyL: 'eclair',
+};
+const BOUTONS = { saut: 'saut', coup: 'coup', tir: 'tir', eclair: 'eclair' };
 
 export function createControls() {
   const move = { x: 0, y: 0 };
   const keys = new Set();
-  let jumpQueued = false, attaqueQueued = false;
+  const file = new Set(), tenus = new Set();
   let stickId = null, origin = null, actif = true;
   let touchMove = { x: 0, y: 0 };
   const stick = document.getElementById('stick');
   const knob = stick.querySelector('i');
-  const jumpBtn = document.getElementById('saut');
   const R = 50; // rayon utile du joystick en pixels
 
   const isTouch = matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window;
@@ -26,17 +32,17 @@ export function createControls() {
     ArrowRight: 'r', KeyD: 'r',
   };
   addEventListener('keydown', e => {
-    if (e.code === 'Space') { if (!e.repeat) jumpQueued = true; e.preventDefault(); return; }
-    if (e.code === 'KeyF' || e.code === 'KeyX' || e.code === 'KeyJ') { if (!e.repeat) attaqueQueued = true; e.preventDefault(); return; }
+    const action = TOUCHES[e.code];
+    if (action) { if (!e.repeat) file.add(action); tenus.add(action); e.preventDefault(); return; }
     if (map[e.code]) { keys.add(map[e.code]); e.preventDefault(); }
   });
-  addEventListener('keyup', e => { if (map[e.code]) keys.delete(map[e.code]); });
-  addEventListener('blur', () => keys.clear());
+  addEventListener('keyup', e => { const action = TOUCHES[e.code]; if (action) tenus.delete(action); if (map[e.code]) keys.delete(map[e.code]); });
+  addEventListener('blur', () => { keys.clear(); tenus.clear(); });
 
   // Joystick : apparaît là où le pouce touche, sur la moitié gauche de l'écran
   addEventListener('pointerdown', e => {
     if (!actif || e.pointerType === 'mouse' || stickId !== null || e.clientX > innerWidth * 0.55) return;
-    if (e.target.closest('button, .pill#son, .ecran')) return;
+    if (e.target.closest('button, .pill#son, .ecran, #dialogue')) return;
     stickId = e.pointerId; origin = { x: e.clientX, y: e.clientY };
     stick.style.display = 'block';
     stick.style.left = (origin.x - 60) + 'px'; stick.style.top = (origin.y - 60) + 'px';
@@ -57,13 +63,13 @@ export function createControls() {
   addEventListener('pointerup', end);
   addEventListener('pointercancel', end);
 
-  jumpBtn.addEventListener('pointerdown', e => { e.preventDefault(); jumpQueued = true; jumpBtn.classList.add('on'); });
-  jumpBtn.addEventListener('pointerup', () => jumpBtn.classList.remove('on'));
-  jumpBtn.addEventListener('pointerleave', () => jumpBtn.classList.remove('on'));
-  const coupBtn = document.getElementById('coup');
-  coupBtn.addEventListener('pointerdown', e => { e.preventDefault(); attaqueQueued = true; coupBtn.classList.add('on'); });
-  coupBtn.addEventListener('pointerup', () => coupBtn.classList.remove('on'));
-  coupBtn.addEventListener('pointerleave', () => coupBtn.classList.remove('on'));
+  // boutons tactiles : saut (maintenu = planer), coup, tir, éclair
+  for (const [action, id] of Object.entries(BOUTONS)) {
+    const b = document.getElementById(id); if (!b) continue;
+    b.addEventListener('pointerdown', e => { e.preventDefault(); file.add(action); tenus.add(action); b.classList.add('on'); });
+    const lacher = () => { tenus.delete(action); b.classList.remove('on'); };
+    b.addEventListener('pointerup', lacher); b.addEventListener('pointerleave', lacher); b.addEventListener('pointercancel', lacher);
+  }
 
   return {
     move,
@@ -74,10 +80,12 @@ export function createControls() {
       if (l > 1) { x /= l; y /= l; }
       move.x = x; move.y = y;
     },
-    consumeJump() { const j = jumpQueued; jumpQueued = false; return j; },
-    consumeAttaque() { const a = attaqueQueued; attaqueQueued = false; return a; },
-    reset() { keys.clear(); jumpQueued = false; attaqueQueued = false; },
-    // hors des planètes (univers, cinématiques) : pas de joystick
-    setActif(v) { actif = v; if (!v) { stickId = null; touchMove = { x: 0, y: 0 }; stick.style.display = 'none'; keys.clear(); jumpQueued = false; } },
+    consume(action) { const a = file.has(action); file.delete(action); return a; },
+    tenu(action) { return tenus.has(action); },
+    consumeJump() { return this.consume('saut'); },
+    consumeAttaque() { return this.consume('coup'); },
+    reset() { keys.clear(); file.clear(); tenus.clear(); },
+    // hors des planètes (univers, cinématiques, dialogues) : pas de joystick
+    setActif(v) { actif = v; if (!v) { stickId = null; touchMove = { x: 0, y: 0 }; stick.style.display = 'none'; keys.clear(); file.clear(); tenus.clear(); } },
   };
 }

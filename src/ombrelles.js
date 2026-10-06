@@ -455,14 +455,15 @@ export function createOmbrelles(scene, modeles = {}) {
   }
 
   // coup de flamme de Fanal : les ennemis dans le rayon sont touchés
-  function frapper(pos, rayon) {
+  // opts.electrique : la décharge traverse les piquants du hérisson
+  function frapper(pos, rayon, opts = {}) {
     const evts = [];
     for (const o of [...liste]) {
       if (o.etat === 'fini' || o.etat === 'disparait' || o.intouchable) continue;
       const centre = tmp.copy(o.g.position).addScaledVector(o.dir, (0.5 + o.vol + o.hop) * o.taille);
       if (centre.distanceTo(pos) > rayon + 0.45 * o.taille) continue;
       if (o.boss && o.pause > 0) continue;
-      if (o.piquant) { evts.push({ type: 'pique', pos: centre.clone() }); continue; }      // le coup rebondit sur les piquants
+      if (o.piquant && !opts.electrique) { evts.push({ type: 'pique', pos: centre.clone() }); continue; }      // le coup rebondit sur les piquants
       toucherEnnemi(o, evts, true);
     }
     // le coup détruit aussi les boules d'ombre proches

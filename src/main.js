@@ -14,6 +14,9 @@ import { createCosmos } from './cosmos.js';
 import { chargerDecors, enregistrerDecors } from './amenagement.js';
 import { chargerFaune, peuplerFaune } from './faune.js';
 import { allumable } from './lumiere.js';
+import { createDialogue } from './dialogue.js';
+import { INTRO, ASTUCES, MERCIS, MEMOIRES } from './histoire.js';
+import { installerMission, updateMission } from './missions.js';
 import { GALAXIES, NB_GALAXIES, NB_PLANETES, planete, lireSauvegarde, nouvellePartie, sauver, cle, phareAllume } from './univers.js';
 
 // ---------- réglages du gameplay ----------
@@ -129,6 +132,9 @@ function hud() {
   const pc = planet.parcours;
   $('pillHabitants').hidden = !(pc && pc.habitants.length);
   if (pc && pc.habitants.length) $('habitants').textContent = `${pc.habitants.filter(x => x.libre).length} / ${pc.habitants.length}`;
+  const M = S.mission;
+  $('pillMission').hidden = !M;
+  if (M) $('mission').textContent = `${M.icone} ${M.progres || '…'}`;
   const boss = ombrelles.boss();
   $('bossBarre').hidden = !boss;
   if (boss) $('bossVie').style.width = (100 * boss.vie / planet.bossVie) + '%';
@@ -147,11 +153,12 @@ function lancer(nouvelle) {
   if (nouvelle || !save) {
     save = nouvellePartie(); sauver(save);
     charger(0, 0);
-    message('Brumelune', 'Ramasse les braises 🔥 pour rallumer le phare', 3500);
+    setTimeout(() => dire('mamie', INTRO), 400);
   } else {
     const ici = save.ici || { g: 0, i: 0 };
     charger(ici.g, ici.i);
     message(planet.nom, GALAXIES[ici.g].nom, 2500);
+    setTimeout(annoncerMission, 900);
   }
 }
 $('jouer').onclick = () => lancer(true);
@@ -196,6 +203,8 @@ function charger(g, i, arrivee = false) {
   if (!allume) ombrelles.peupler(planet);
   gardien = !allume && L.gardien ? createGardien(glow, planet, L.gardien) : null;
   faune = peuplerFaune(planet, allumable);
+  S.mission = save ? installerMission(planet, glow, save, cle(g, i)) : null;
+  afficherPouvoirs();
   // la Luciole est garée en haut de la planète
   garerVaisseau();
   planet.obstacles.push({ dir: Y.clone(), radius: 1.3, height: 2.2 });
@@ -281,6 +290,7 @@ function updateAtterrissage(dt) {
   if (S.anim > 2.3) {
     S.pose = false; fanal.object.scale.setScalar(1);
     S.state = 'jeu'; modeInterface('jeu'); controls.setActif(true);
+    if (planet.boss) astuce('boss'); else setTimeout(annoncerMission, 300);
     message(planet.nom, planet.lit ? 'Phare déjà rallumé ✓' : planet.boss ? 'La Grande Ombrelle garde le Grand Phare ! Saute-lui dessus 👑' : 'Un petit gardien est prisonnier ici… Rallume le phare !', 3200);
   }
 }
@@ -345,6 +355,9 @@ function updatePlayer(dt) {
       S.airJumps--; vr = Math.max(vr, JUMP2); sfx.jump2(); vibre('leger'); fanal.spin(); burst(S.pos, 18, 0xff8ad8, 3, up);
     }
   }
+  // planer : saut maintenu en tombant, l'écharpe freine la chute
+  S.plane = !!(save && save.pouvoirs && save.pouvoirs.planer) && !S.onGround && vr < 0 && controls.tenu('saut');
+  if (S.plane) { vr = Math.max(vr, -2.2); vt.lerp(wish.clone().multiplyScalar(RUN * mag), 1 - Math.exp(-6 * dt)); if (Math.random() < 0.4) burst(S.pos.clone().addScaledVector(up, 0.6), 1, 0x9ff6ff, 1); }
   S.vel.copy(vt).addScaledVector(up, vr);
   S.pos.addScaledVector(S.vel, dt);
 
@@ -417,7 +430,7 @@ function verifierPhare() {
   const P = planet;
   if (P.lit || P.beacon.ready || P.embers.some(e => !e.taken)) return;
   if (ombrelles.boss()) { message('Toutes les braises !', 'Mais la Grande Ombrelle garde encore le phare 👑'); return; }
-  P.beacon.ready = true; sfx.ready();
+  P.beacon.ready = true; sfx.ready(); setTimeout(() => astuce('phare'), 1200);
   message('Toutes les braises !', 'Va rallumer le phare 🏮');
 }
 
@@ -431,6 +444,7 @@ function updateGame(dt) {
     if (chest.distanceTo(e.holder.position) < 1.25) {
       e.taken = true; e.holder.visible = false; S.power++;
       const got = P.embers.filter(x => x.taken).length;
+      astuce('cristal');
       sfx.cristal(got); vibre('moyen'); fanal.setMood('ravi', 0.9);
       burst(e.holder.position, 40, 0xffb347, 6); burst(e.holder.position, 16, 0xfff3c4, 3, e.dir); onde(e.holder.position, e.dir);
       $('braises').parentElement.classList.remove('pop'); void $('braises').offsetWidth; $('braises').parentElement.classList.add('pop');
@@ -458,6 +472,7 @@ function updateGame(dt) {
 
   // rallumer le phare
   if (P.beacon.ready && !P.lit && chest.distanceTo(P.beacon.pos) < P.beacon.portee + (P.boss ? 1.5 : 0)) {
+    setTimeout(() => { astuce('allume'); verifierPouvoirs(); }, 3000);
     P.lit = true; sfx.beacon(); vibre('fort'); fanal.setMood('super', 3);
     save.allumes[cle(S.g, S.i)] = true;
     burst(P.beacon.pos.clone().addScaledVector(P.beacon.dir, 3), 90, 0xffd27a, 9);
@@ -467,7 +482,7 @@ function updateGame(dt) {
         setTimeout(() => { sfx.victory(); stopMusic(); $('temps').textContent = `${save.gardiens} gardiens libérés · ${save.eclats} éclats d'étoile`; $('fin').hidden = false; }, 2600);
         message('Le dernier Grand Phare brille !', '', 2600);
       } else {
-        save.debloquee = Math.max(save.debloquee, S.g + 1);
+        save.debloquee = Math.max(save.debloquee, S.g + 1); setTimeout(() => astuce('galaxie'), 4600);
         message(`${GALAXIES[S.g].nom} est libérée !`, `Remonte dans la Luciole : cap sur ${GALAXIES[S.g + 1].nom} 🚀`, 4500);
       }
     } else {
@@ -506,7 +521,7 @@ function ouvrirCoffre(c) {
   (save.coffres[k] ||= []).push(c.n);
   if (nom) save.ressources[nom] = (save.ressources[nom] || 0) + 15;
   const premier = save.coffres[k].length === 1;
-  if (premier) save.memoires = (save.memoires || 0) + 1;
+  if (premier) { save.memoires = (save.memoires || 0) + 1; setTimeout(() => astuce('coffre'), 900); }
   sfx.coffre(); vibre('moyen'); fanal.setMood('ravi', 1.2);
   burst(c.pos, 50, 0xffd36b, 7, c.dir); onde(c.pos, c.dir, 0xffd36b);
   message(premier ? '📜 Éclat de mémoire trouvé !' : 'Coffre ouvert !', premier ? 'Un souvenir de ce qui s\'est passé… (journal bientôt)' : `+15 ${planet.ressource ? planet.ressource.icone : ''}`, 2600);
@@ -516,7 +531,7 @@ function updateParcours(dt) {
   const pc = planet.parcours; if (!pc) return;
   const chest = S.pos.clone().addScaledVector(S.up, 0.7), k = cle(S.g, S.i);
   for (const rl of pc.relais) if (!rl.allume && chest.distanceTo(rl.g.position) < 2.2) {
-    rl.allume = true; S.reprise = rl.reprise; sfx.ready(); vibre('leger');
+    rl.allume = true; S.reprise = rl.reprise; sfx.ready(); vibre('leger'); setTimeout(() => astuce('relais'), 700);
     burst(rl.g.position.clone().addScaledVector(rl.dir, 1.5), 24, 0xffb347, 4);
     message('Lanterne-relais allumée ✨', 'Tu repartiras d\'ici', 1600);
   }
@@ -531,8 +546,132 @@ function updateParcours(dt) {
     sfx.joie(); vibre('moyen'); fanal.setMood('ravi', 1.2); burst(h.pos, 40, 0xb48cff, 5); onde(h.pos, h.dir, 0xd9b8ff);
     message(n === pc.habitants.length ? `Tous les ${pc.peuple.nom} sont libres ! 🎉` : `Un des ${pc.peuple.nom} est libre !`, `${n} / ${pc.habitants.length} · il rejoint la Luciole`, 2200);
     sauver(save); hud();
+    if (save.astuces && save.astuces.habitant && Math.random() < 0.35) peupleParle(MERCIS[Math.floor(Math.random() * MERCIS.length)]);
+    setTimeout(() => astuce('habitant'), 800);
   }
 }
+
+// ---------- les pouvoirs de Fanal : planer, tir de braise, décharge électrique ----------
+// ils se débloquent au fil des phares rallumés (Mamie Mèche les explique)
+const POUVOIRS = [
+  { nom: 'planer', phares: 1, titre: 'Planer', aide: 'Maintiens SAUT en tombant : ton écharpe te fait planer.' },
+  { nom: 'tir', phares: 3, titre: 'Tir de braise 🔸', aide: 'Bouton 🔸 (touche G) : une braise file droit devant.' },
+  { nom: 'eclair', phares: 6, titre: 'Décharge électrique ⚡', aide: 'Bouton ⚡ (touche H) : une décharge autour de toi, même à travers les piquants.' },
+];
+function verifierPouvoirs() {
+  save.pouvoirs ||= {};
+  const n = Object.keys(save.allumes).length;
+  for (const p of POUVOIRS) if (!save.pouvoirs[p.nom] && n >= p.phares) {
+    save.pouvoirs[p.nom] = true; sauver(save);
+    setTimeout(() => dire('mamie', [`Bravo mon petit Fanal ! Tu as gagné un nouveau pouvoir : ${p.titre}.`, p.aide]), 3200);
+  }
+  afficherPouvoirs();
+}
+function afficherPouvoirs() {
+  const p = (save && save.pouvoirs) || {};
+  document.body.classList.toggle('pouvoir-tir', !!p.tir);
+  document.body.classList.toggle('pouvoir-eclair', !!p.eclair);
+}
+const braises = [];
+const braiseMat = new THREE.MeshBasicMaterial({ color: 0xffc56b });
+const braiseGeo = new THREE.OctahedronGeometry(0.22);
+const eclairMat = new THREE.LineBasicMaterial({ color: 0x9ff6ff, transparent: true, opacity: 1, blending: THREE.AdditiveBlending, depthWrite: false });
+const eclairs = [];
+function updatePouvoirs(dt) {
+  const evts = [], p = (save && save.pouvoirs) || {};
+  S.rechTir = Math.max(0, (S.rechTir || 0) - dt); S.rechEclair = Math.max(0, (S.rechEclair || 0) - dt);
+  if (S.state !== 'jeu') { controls.consume('tir'); controls.consume('eclair'); }
+  // tir de braise : file au ras du sol en suivant la courbe de la planète
+  if (S.state === 'jeu' && controls.consume('tir') && p.tir && S.rechTir <= 0) {
+    S.rechTir = 0.5;
+    const m = new THREE.Mesh(braiseGeo, braiseMat);
+    const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: glow, color: 0xff8a3d, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending })); halo.scale.setScalar(1.4); m.add(halo);
+    scene.add(m);
+    braises.push({ m, n: S.pos.clone().normalize(), cap: projectOnPlane(S.face.clone(), S.up).normalize(), t: 0 });
+    sfx.tir(); fanal.setMood('super', 0.3); vibre('leger');
+  }
+  for (let i = braises.length - 1; i >= 0; i--) {
+    const b = braises[i]; b.t += dt;
+    b.n.addScaledVector(b.cap, 17 * dt / planet.radius).normalize(); projectOnPlane(b.cap, b.n).normalize();
+    b.m.position.copy(planet.surfacePoint(b.n)).addScaledVector(b.n, 0.9); b.m.rotation.y += dt * 12;
+    if (Math.random() < 0.6) burst(b.m.position, 1, 0xff8a3d, 0.8);
+    const touche = ombrelles.frapper(b.m.position, 0.6);
+    const coffre = planet.parcours && planet.parcours.coffres.find(c => !c.ouvert && c.pos.distanceTo(b.m.position) < 1.2);
+    if (coffre) ouvrirCoffre(coffre);
+    const mur = planet.solides.some(s => s.bas < 0.5 && s.haut > 0.8 && s.dir.angleTo(b.n) * planet.radius < s.radius);
+    if (touche.length || coffre || mur || b.t > 0.85) {
+      evts.push(...touche); burst(b.m.position, 18, 0xffa040, 4); scene.remove(b.m); b.m.children[0].material.dispose(); braises.splice(i, 1);
+    }
+  }
+  // décharge électrique : zone autour de Fanal, traverse les piquants
+  if (S.state === 'jeu' && controls.consume('eclair') && p.eclair && S.rechEclair <= 0) {
+    S.rechEclair = 3.5;
+    const centre = S.pos.clone().addScaledVector(S.up, 0.8);
+    evts.push(...ombrelles.frapper(centre, 4.5, { electrique: true }));
+    onde(centre, S.up, 0x7cf0ff); onde(S.pos.clone().addScaledVector(S.up, 0.2), S.up, 0x9ff6ff); burst(centre, 50, 0x9ff6ff, 8);
+    sfx.onde(); vibre('fort'); fanal.setMood('super', 0.8);
+    for (let k = 0; k < 7; k++) {                                     // arcs électriques en zigzag
+      const pts = [centre.clone()], dirk = projectOnPlane(new THREE.Vector3().randomDirection(), S.up).normalize();
+      for (let j = 1; j <= 6; j++) pts.push(centre.clone().addScaledVector(dirk, j * 0.75).add(new THREE.Vector3().randomDirection().multiplyScalar(0.3)));
+      const l = new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), eclairMat.clone()); scene.add(l); eclairs.push({ l, t: 0 });
+    }
+  }
+  for (let i = eclairs.length - 1; i >= 0; i--) {
+    const e = eclairs[i]; e.t += dt; e.l.material.opacity = Math.max(0, 1 - e.t * 4);
+    if (e.t > 0.25) { scene.remove(e.l); e.l.geometry.dispose(); e.l.material.dispose(); eclairs.splice(i, 1); }
+  }
+  return evts;
+}
+
+// ---------- l'histoire : dialogues, conseils de Mamie Mèche, mission, journal ----------
+const dialogue = createDialogue({
+  quandOuvert: () => controls.setActif(false),
+  quandFerme: () => controls.setActif(S.state === 'jeu'),
+  son: () => sfx.parole(),
+});
+const dire = (qui, lignes) => dialogue.dire(qui, lignes);
+// un conseil de Mamie Mèche, une seule fois dans toute la partie
+function astuce(cleAstuce) {
+  if (!save) return;
+  save.astuces ||= {};
+  if (save.astuces[cleAstuce]) return;
+  save.astuces[cleAstuce] = true; sauver(save);
+  dire('mamie', ASTUCES[cleAstuce]);
+}
+function peupleParle(ligne) {
+  const pe = planet.parcours.peuple;
+  dire({ nom: pe.nom, portrait: '🙋', couleur: '#' + pe.deco.toString(16).padStart(6, '0') }, ligne);
+}
+function annoncerMission() {
+  const M = S.mission; if (!M || M.faite) return;
+  const pc = planet.parcours;
+  dire('mamie', `Mission : ${M.titre} ${M.icone}. ` + M.annonce(pc.peuple.nom, planet.ressource ? planet.ressource.nom.toLowerCase() : '', M.voulu));
+}
+function missionEvt(e) {
+  const M = S.mission;
+  if (e.type === 'brasero') { sfx.ready(); burst(e.pos, 30, 0xff8a3d, 5, null); onde(e.pos, planet.surfacePoint(e.pos.clone().normalize()).normalize(), 0xff8a3d); }
+  if (e.type === 'chrono_rate') { sfx.respawn(); message('Trop tard…', 'Les braseros se sont éteints. Rallume le premier pour recommencer.', 2600); }
+  if (e.type === 'demande') peupleParle(`Il me faut encore ${e.il_manque} ${planet.ressource.nom.toLowerCase()} ${planet.ressource.icone}. Tu les trouveras en suivant les traînées !`);
+  if (e.type === 'reussie') {
+    (save.etoiles ||= {})[cle(S.g, S.i)] = true; sauver(save);
+    sfx.victory(); vibre('fort'); fanal.setMood('super', 2); burst(S.pos.clone().addScaledVector(S.up, 1.5), 80, 0xffe066, 8);
+    message(`⭐ Mission réussie : ${M.titre} !`, 'Une étoile de mission de plus', 3000);
+    if (M.type === 'commande') peupleParle('Merci, petite flamme ! Avec ça, notre village va renaître. Prends cette étoile, elle porte bonheur.');
+    else setTimeout(() => dire('mamie', 'Magnifique ! Une étoile de mission de plus pour la Luciole. ⭐'), 600);
+  }
+  hud();
+}
+// le journal : les éclats de mémoire trouvés, dans l'ordre de l'histoire
+function ouvrirJournal() {
+  const n = Math.min(save ? save.memoires || 0 : 0, MEMOIRES.length);
+  $('journalListe').innerHTML = n ? MEMOIRES.slice(0, n).map((m, i) => `<li><b>Éclat ${i + 1}</b><p>${m}</p></li>`).join('')
+    : '<li><p>Aucun éclat de mémoire pour l\'instant. Ils sont cachés dans les coffres des planètes.</p></li>';
+  const etoiles = save ? Object.keys(save.etoiles || {}).length : 0;
+  $('journalStats').textContent = `📜 ${n} / ${MEMOIRES.length} éclats · ⭐ ${etoiles} missions · 🙋 ${save ? save.habitants || 0 : 0} habitants libérés · 🧡 ${save ? save.gardiens : 0} gardiens`;
+  $('journal').hidden = false; S.journal = true; controls.setActif(false);
+}
+$('btnJournal').onclick = ouvrirJournal;
+$('fermerJournal').onclick = () => { $('journal').hidden = true; S.journal = false; controls.setActif(S.state === 'jeu'); };
 
 // ---------- Ombrelles ----------
 function updateOmbrelles(dt) {
@@ -548,6 +687,7 @@ function updateOmbrelles(dt) {
     evts.push(...ombrelles.frapper(centre, 2.1));
     for (const c of planet.parcours ? planet.parcours.coffres : []) if (!c.ouvert && c.pos.distanceTo(centre) < 2.4) ouvrirCoffre(c);
   }
+  evts.push(...updatePouvoirs(dt));
   for (const ev of evts) {
     // rebond sur une Ombrelle ; sur le boss, Fanal est aussi éjecté sur le côté pour ne pas retomber dessus
     const rebond = () => {
@@ -586,7 +726,7 @@ function updateOmbrelles(dt) {
       S.vel.copy(recul.normalize().multiplyScalar(ev.o.boss ? 13 : 9)).addScaledVector(S.up, 7); S.onGround = false;
       sfx.touche(); vibre('fort'); fanal.setMood('peur', 1.4); burst(S.pos, 16, 0x5b2d8f, 3);
       // Fanal perd une flamme de vie ; plus de vie : il repart de la dernière lanterne-relais
-      S.vies--; hud();
+      S.vies--; hud(); setTimeout(() => astuce('touche'), 500);
       if (S.vies <= 0) reprendre();
     }
   }
@@ -637,9 +777,15 @@ function frame(now) {
   const raw = (now - last) / 1000; last = now; qualite(raw);
   const dt = Math.min(1 / 30, raw);
   clock += dt;
-  if (S.state === 'jeu') { S.time += dt; updatePlayer(dt); updateGame(dt); updateParcours(dt); }
+  const enJeu = S.state === 'jeu' && !dialogue.ouvert && !S.journal;          // pendant un dialogue ou le journal, le jeu attend
+  dialogue.update(dt);
+  if (enJeu) {
+    S.time += dt; updatePlayer(dt); updateGame(dt); updateParcours(dt);
+    const ev = updateMission(S.mission, planet, S.pos.clone().addScaledVector(S.up, 0.7), dt, clock); if (ev) missionEvt(ev);
+    if (S.mission && S.mission.type === 'braseros' && S.mission.chrono > 0) hud();
+  }
   else if (S.state === 'titre') { S.camHeading.applyAxisAngle(S.up, dt * 0.25); }
-  if (planet && S.state !== 'cosmos') { animatePlanet(planet, dt, clock); updateOmbrelles(dt); if (faune) faune.update(dt, { pos: S.pos, actif: S.state === 'jeu' }); }
+  if (planet && S.state !== 'cosmos') { animatePlanet(planet, dt, clock); if (!dialogue.ouvert && !S.journal) updateOmbrelles(dt); if (faune) faune.update(dt, { pos: S.pos, actif: S.state === 'jeu' }); }
   if (S.state === 'jeu' || S.state === 'titre') vaisseau.animate(dt, 0, 0);
   if (S.state !== 'jeu') $('embarquer').hidden = true;
   updateParts(dt); updateOndes(dt);
@@ -660,4 +806,4 @@ updateCamera(0, true);
 requestAnimationFrame(frame);
 
 // accès pour les tests automatiques
-window.__jeu = { S, get planet() { return planet; }, get save() { return save; }, get faune() { return faune; }, ombrelles, cosmos, charger, decoller };
+window.__jeu = { dialogue, ouvrirJournal, S, get planet() { return planet; }, get save() { return save; }, get faune() { return faune; }, ombrelles, cosmos, charger, decoller };
