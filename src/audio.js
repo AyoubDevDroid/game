@@ -53,6 +53,9 @@ export const sfx = {
   touche: () => { tone({ freq: 330, to: 110, type: 'sawtooth', dur: 0.35, vol: 0.08 }); tone({ freq: 260, to: 90, type: 'triangle', dur: 0.4, vol: 0.1, delay: 0.05 }); },
   land: () => tone({ freq: 140, to: 70, type: 'sine', dur: 0.12, vol: 0.18 }),
   piece: n => { tone({ freq: note(784, n % 10), type: 'sine', dur: 0.12, vol: 0.13 }); tone({ freq: note(784, (n % 10) + 4), type: 'triangle', dur: 0.14, vol: 0.07, delay: 0.04 }); },
+  coup: () => { noise({ dur: 0.22, vol: 0.12, from: 800, to: 3000 }); tone({ freq: 240, to: 520, type: 'sawtooth', dur: 0.18, vol: 0.06 }); },
+  coffre: () => { [0, 2, 4, 7, 9].forEach((s, i) => tone({ freq: note(523, s), type: 'triangle', dur: 0.3, vol: 0.13, delay: i * 0.06 })); noise({ dur: 0.5, vol: 0.05, from: 5000, to: 11000 }); },
+  joie: () => { [4, 7, 9, 12].forEach((s, i) => tone({ freq: note(392, s), type: 'sine', dur: 0.28, vol: 0.14, delay: i * 0.08 })); tone({ freq: 880, to: 1320, type: 'triangle', dur: 0.3, vol: 0.06, delay: 0.3 }); },
   cristal: n => {   // carillon cristallin qui monte d'une note à chaque cristal, avec un scintillement
     [0, 2, 4].forEach((s, i) => tone({ freq: note(659, n + s), type: 'triangle', dur: 0.35, vol: 0.14, delay: i * 0.05 }));
     tone({ freq: note(1318, n + 4), type: 'sine', dur: 0.6, vol: 0.08, delay: 0.12 });

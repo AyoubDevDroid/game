@@ -8,6 +8,7 @@ import { DECORS, MATIERES } from './decor.js';
 import { morceaux } from './modeles.js';
 import { rng } from './univers.js';
 import { amenager, decorsPrets } from './amenagement.js';
+import { tracerChemin, placerTresors, animerParcours } from './parcours.js';
 
 // ---------- hasard reproductible et bruit (relief) ----------
 function randomDir(r) { const u = r() * 2 - 1, a = r() * Math.PI * 2, s = Math.sqrt(1 - u * u); return new THREE.Vector3(s * Math.cos(a), u, s * Math.sin(a)); }
@@ -161,7 +162,8 @@ for (const m of Object.values(CRISTAL)) m.userData.partage = true;   // partagé
 // ---------- une planète (centrée à l'origine) ----------
 // L : description venant de univers.js ; allume : le phare est déjà rallumé (planète revisitée)
 // ramasses : numéros des ressources déjà prises sur cette planète (sauvegarde)
-export function createPlanet(scene, glow, modeles, L, allume = false, ramasses = []) {
+// deja : ce qui a déjà été fait sur la planète { coffres: [n], liberes: [n] } (sauvegarde)
+export function createPlanet(scene, glow, modeles, L, allume = false, ramasses = [], deja = { coffres: [], liberes: [] }) {
   const r = rng(L.seed);
   const center = new THREE.Vector3();
   const bDir = new THREE.Vector3(...L.beacon).normalize();
@@ -262,10 +264,16 @@ export function createPlanet(scene, glow, modeles, L, allume = false, ramasses =
 
   // ---- aménagement en objets 3D : forêts, escaliers, îlots flottants, cachettes (amenagement.js) ----
   planet.solides = [];
+  // ---- le parcours : chemin pavé de la Luciole au phare, lanternes-relais (tracé avant le décor, qui le laisse libre) ----
+  const ctxP = { L, r, k, group: planet.group, surfacePoint: planet.surfacePoint, placeOn, marquer, glow, U, allumable, obstacles: planet.obstacles, solides: planet.solides };
+  const depart = new THREE.Vector3(0, Math.cos(6 / L.radius), Math.sin(6 / L.radius));
+  const arrivee = bDir.clone().applyAxisAngle(new THREE.Vector3().crossVectors(bDir, depart).normalize(), 2.6 / L.radius);
+  const chemin = tracerChemin({ ...ctxP, depart, arrivee });
   const avec3D = decorsPrets();
   let coins = avec3D ? amenager({ L, r, k, center, U, group: planet.group, surfacePoint: planet.surfacePoint, freeDir, marquer, allumable, solides: planet.solides }) : [];
   for (let i = coins.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [coins[i], coins[j]] = [coins[j], coins[i]]; }
-  coins = coins.slice(0, Math.ceil(L.embers * 0.6));
+  const nbCoinsBraises = Math.ceil(L.embers * 0.6), coinsRestants = coins.slice(nbCoinsBraises);
+  coins = coins.slice(0, nbCoinsBraises);
 
   // ---- braises : d'abord dans les coins à explorer (sommets, îlots, cachettes), puis ailleurs ----
   planet.embers = [];
@@ -288,6 +296,25 @@ export function createPlanet(scene, glow, modeles, L, allume = false, ramasses =
     planet.embers.push({ holder, inner, gem, coeur, anneau, orbites, halo: sp, dir: dd, taken: false, phase: r() * 6 });
   }
   if (!avec3D) decorsDessines();
+
+  // ---- trésors et habitants : dans les coins restants, en hauteur, et cachés derrière les rochers et les arbres ----
+  const cachette = () => {
+    const s = planet.solides.filter(x => x.bas === 0 && x.haut > 0.8 && x.haut < 9);
+    for (let n = 0; n < 40 && s.length; n++) {
+      const o = s[Math.floor(r() * s.length)];
+      if (r() < 0.3 && o.haut < 4.5 && o.radius > 0.6) return { dir: o.dir.clone(), h: o.haut + 0.9 };     // perché dessus
+      const d = o.dir.clone().addScaledVector(randomDir(r).cross(o.dir).normalize(), (o.radius + 1) / L.radius).normalize();
+      if (!planet.solides.some(x => x.bas === 0 && x !== o && x.dir.angleTo(d) * L.radius < x.radius + 0.6)) return { dir: d, h: 0.9 };
+    }
+    return { dir: freeDir(0.4), h: 0.9 };
+  };
+  const prendre = n => { const out = []; for (let i = 0; i < n; i++) out.push(coinsRestants.length ? coinsRestants.shift() : cachette()); return out; };
+  const nbHabitants = L.boss ? 0 : 8 + Math.floor(L.radius / 5);
+  const coinsCoffres = prendre(L.boss ? 0 : 3), coinsHab = prendre(nbHabitants);
+  const coinsFlam = [0, 1, 2, 3].map(() => ({ dir: freeDir(0.3), h: 1.1 }));
+  for (const c of [...coinsCoffres, ...coinsHab, ...coinsFlam]) marquer(c.dir, 0.25);
+  planet.parcours = { ...chemin, ...placerTresors(ctxP, coinsCoffres, coinsHab, coinsFlam, deja) };
+
 
   // ---- décors dessinés par le code (si les objets 3D n'ont pas pu être chargés) ----
   function decorsDessines() {
@@ -410,6 +437,7 @@ export function createPlanet(scene, glow, modeles, L, allume = false, ramasses =
 
 // Animation de la planète (appelée à chaque image)
 export function animatePlanet(p, dt, clock) {
+  animerParcours(p, dt, clock);
   // ressources : elles tournent et flottent ; celles qu'on a prises disparaissent
   const res = p.ressources;
   if (res && res.mesh) {

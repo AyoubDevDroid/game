@@ -4,7 +4,7 @@
 export function createControls() {
   const move = { x: 0, y: 0 };
   const keys = new Set();
-  let jumpQueued = false;
+  let jumpQueued = false, attaqueQueued = false;
   let stickId = null, origin = null, actif = true;
   let touchMove = { x: 0, y: 0 };
   const stick = document.getElementById('stick');
@@ -27,6 +27,7 @@ export function createControls() {
   };
   addEventListener('keydown', e => {
     if (e.code === 'Space') { if (!e.repeat) jumpQueued = true; e.preventDefault(); return; }
+    if (e.code === 'KeyF' || e.code === 'KeyX' || e.code === 'KeyJ') { if (!e.repeat) attaqueQueued = true; e.preventDefault(); return; }
     if (map[e.code]) { keys.add(map[e.code]); e.preventDefault(); }
   });
   addEventListener('keyup', e => { if (map[e.code]) keys.delete(map[e.code]); });
@@ -59,6 +60,10 @@ export function createControls() {
   jumpBtn.addEventListener('pointerdown', e => { e.preventDefault(); jumpQueued = true; jumpBtn.classList.add('on'); });
   jumpBtn.addEventListener('pointerup', () => jumpBtn.classList.remove('on'));
   jumpBtn.addEventListener('pointerleave', () => jumpBtn.classList.remove('on'));
+  const coupBtn = document.getElementById('coup');
+  coupBtn.addEventListener('pointerdown', e => { e.preventDefault(); attaqueQueued = true; coupBtn.classList.add('on'); });
+  coupBtn.addEventListener('pointerup', () => coupBtn.classList.remove('on'));
+  coupBtn.addEventListener('pointerleave', () => coupBtn.classList.remove('on'));
 
   return {
     move,
@@ -70,7 +75,8 @@ export function createControls() {
       move.x = x; move.y = y;
     },
     consumeJump() { const j = jumpQueued; jumpQueued = false; return j; },
-    reset() { keys.clear(); jumpQueued = false; },
+    consumeAttaque() { const a = attaqueQueued; attaqueQueued = false; return a; },
+    reset() { keys.clear(); jumpQueued = false; attaqueQueued = false; },
     // hors des planètes (univers, cinématiques) : pas de joystick
     setActif(v) { actif = v; if (!v) { stickId = null; touchMove = { x: 0, y: 0 }; stick.style.display = 'none'; keys.clear(); jumpQueued = false; } },
   };

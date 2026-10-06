@@ -124,6 +124,10 @@ function hud() {
     $('ressourceIcone').textContent = planet.ressource.icone;
     $('ressource').textContent = `${res.items.filter(x => x.pris).length} / ${res.items.length}`;
   }
+  $('pillVies').textContent = '❤️'.repeat(Math.max(0, S.vies)) + '🤍'.repeat(3 - Math.max(0, S.vies));
+  const pc = planet.parcours;
+  $('pillHabitants').hidden = !(pc && pc.habitants.length);
+  if (pc && pc.habitants.length) $('habitants').textContent = `${pc.habitants.filter(x => x.libre).length} / ${pc.habitants.length}`;
   const boss = ombrelles.boss();
   $('bossBarre').hidden = !boss;
   if (boss) $('bossVie').style.width = (100 * boss.vie / planet.bossVie) + '%';
@@ -186,7 +190,8 @@ function charger(g, i, arrivee = false) {
   const L = planete(g, i), allume = phareAllume(save || nouvellePartie(), g, i);
   S.g = g; S.i = i;
   ambiancePlanete(L);
-  planet = createPlanet(scene, glow, modeles, L, allume, (save && save.ramasse[cle(g, i)]) || []);
+  const k = cle(g, i);
+  planet = createPlanet(scene, glow, modeles, L, allume, (save && save.ramasse[k]) || [], { coffres: (save && save.coffres[k]) || [], liberes: (save && save.liberes[k]) || [] });
   if (!allume) ombrelles.peupler(planet);
   gardien = !allume && L.gardien ? createGardien(glow, planet, L.gardien) : null;
   faune = peuplerFaune(planet, allumable);
@@ -198,7 +203,7 @@ function charger(g, i, arrivee = false) {
   S.up.set(0, Math.cos(a), Math.sin(a));
   S.pos.copy(planet.surfacePoint(S.up)); S.vel.set(0, 0, 0);
   S.face.set(1, 0, 0); projectOnPlane(S.face, S.up).normalize(); S.camHeading.copy(S.face);
-  S.onGround = true; S.invuln = 0;
+  S.onGround = true; S.invuln = 0; S.vies = 3; S.reprise = null;
   S.power = planet.embers.filter(e => e.taken).length;
   fanal.object.visible = true; fanal.setMood(allume ? 'content' : 'surpris', 1);
   if (save) { save.ici = { g, i }; save.galaxie = g; sauver(save); }
@@ -481,13 +486,71 @@ function updateGame(dt) {
   $('embarquer').hidden = !pretAEmbarquer();
 }
 
+// ---------- le parcours : relais, coffres, flammèches, habitants ----------
+// plus de vie : Fanal se rallume à la dernière lanterne-relais (ou près de la Luciole)
+function reprendre() {
+  fondu(true);
+  setTimeout(() => {
+    const d = S.reprise ? S.reprise.clone() : new THREE.Vector3(0, Math.cos(3.4 / planet.radius), Math.sin(3.4 / planet.radius));
+    S.up.copy(d); S.pos.copy(planet.surfacePoint(d)).addScaledVector(d, 0.5); S.vel.set(0, 0, 0);
+    S.vies = 3; S.invuln = 2; hud(); updateCamera(0, true);
+    fanal.setMood('surpris', 1.2); sfx.respawn();
+    message('Fanal se rallume…', S.reprise ? 'à la dernière lanterne-relais' : 'près de la Luciole', 2000);
+    fondu(false);
+  }, 380);
+}
+function ouvrirCoffre(c) {
+  c.ouvert = true;
+  const k = cle(S.g, S.i), nom = planet.ressource ? planet.ressource.nom : null;
+  (save.coffres[k] ||= []).push(c.n);
+  if (nom) save.ressources[nom] = (save.ressources[nom] || 0) + 15;
+  const premier = save.coffres[k].length === 1;
+  if (premier) save.memoires = (save.memoires || 0) + 1;
+  sfx.coffre(); vibre('moyen'); fanal.setMood('ravi', 1.2);
+  burst(c.pos, 50, 0xffd36b, 7, c.dir); onde(c.pos, c.dir, 0xffd36b);
+  message(premier ? '📜 Éclat de mémoire trouvé !' : 'Coffre ouvert !', premier ? 'Un souvenir de ce qui s\'est passé… (journal bientôt)' : `+15 ${planet.ressource ? planet.ressource.icone : ''}`, 2600);
+  sauver(save);
+}
+function updateParcours(dt) {
+  const pc = planet.parcours; if (!pc) return;
+  const chest = S.pos.clone().addScaledVector(S.up, 0.7), k = cle(S.g, S.i);
+  for (const rl of pc.relais) if (!rl.allume && chest.distanceTo(rl.g.position) < 2.2) {
+    rl.allume = true; S.reprise = rl.reprise; sfx.ready(); vibre('leger');
+    burst(rl.g.position.clone().addScaledVector(rl.dir, 1.5), 24, 0xffb347, 4);
+    message('Lanterne-relais allumée ✨', 'Tu repartiras d\'ici', 1600);
+  }
+  for (const c of pc.coffres) if (!c.ouvert && chest.distanceTo(c.pos) < 1.4) ouvrirCoffre(c);
+  for (const f of pc.flammeches) if (!f.pris && chest.distanceTo(f.pos) < 1.3) {
+    f.pris = true; S.vies = Math.min(3, S.vies + 1); sfx.piece(6); burst(f.pos, 16, 0xff5fa2, 3); hud();
+  }
+  for (const h of pc.habitants) if (!h.libre && chest.distanceTo(h.pos) < 1.6) {
+    h.libre = true; h.t = 0;
+    (save.liberes[k] ||= []).push(h.n); save.habitants = (save.habitants || 0) + 1;
+    const n = pc.habitants.filter(x => x.libre).length;
+    sfx.joie(); vibre('moyen'); fanal.setMood('ravi', 1.2); burst(h.pos, 40, 0xb48cff, 5); onde(h.pos, h.dir, 0xd9b8ff);
+    message(n === pc.habitants.length ? `Tous les ${pc.peuple.nom} sont libres ! 🎉` : `Un des ${pc.peuple.nom} est libre !`, `${n} / ${pc.habitants.length} · il rejoint la Luciole`, 2200);
+    sauver(save); hud();
+  }
+}
+
 // ---------- Ombrelles ----------
 function updateOmbrelles(dt) {
   S.invuln = Math.max(0, S.invuln - dt);
   const evts = ombrelles.update(dt, { pos: S.pos, up: S.up, vel: S.vel, actif: S.state === 'jeu' });
+  // coup de flamme : tourbillon autour de Fanal (chasse les Ombrelles, ouvre les coffres)
+  S.recharge = Math.max(0, (S.recharge || 0) - dt);
+  if (S.state === 'jeu' && controls.consumeAttaque() && S.recharge <= 0) {
+    S.recharge = 0.45;
+    const centre = S.pos.clone().addScaledVector(S.up, 0.8);
+    fanal.spin(); fanal.setMood('super', 0.5); sfx.coup(); vibre('leger');
+    onde(centre, S.up, 0xff8a3d); burst(centre, 26, 0xff8a3d, 6);
+    evts.push(...ombrelles.frapper(centre, 2.1));
+    for (const c of planet.parcours ? planet.parcours.coffres : []) if (!c.ouvert && c.pos.distanceTo(centre) < 2.4) ouvrirCoffre(c);
+  }
   for (const ev of evts) {
     // rebond sur une Ombrelle ; sur le boss, Fanal est aussi éjecté sur le côté pour ne pas retomber dessus
     const rebond = () => {
+      if (ev.coup) return;                                          // touchée d'un coup de flamme : pas de rebond
       projectOnPlane(S.vel, S.up).addScaledVector(S.up, JUMP * 0.85); S.onGround = false; S.airJumps = 1;
       if (ev.o.boss) {
         const cote = projectOnPlane(S.pos.clone().sub(ev.o.g.position), S.up);
@@ -516,14 +579,9 @@ function updateOmbrelles(dt) {
       if (recul.lengthSq() < 1e-4) recul.copy(S.face).negate();
       S.vel.copy(recul.normalize().multiplyScalar(ev.o.boss ? 13 : 9)).addScaledVector(S.up, 7); S.onGround = false;
       sfx.touche(); vibre('fort'); fanal.setMood('peur', 1.4); burst(S.pos, 16, 0x5b2d8f, 3);
-      // l'Ombrelle souffle une braise, qui retourne à sa place
-      const P = planet, prise = P.lit ? null : P.embers.filter(e => e.taken).pop();
-      if (prise) {
-        prise.taken = false; prise.holder.visible = true; S.power--; P.beacon.ready = false;
-        burst(prise.holder.position, 20, 0xffa040, 3);
-        message('Une Ombrelle a soufflé une braise !', 'Elle est retournée à sa place', 2200);
-        hud();
-      }
+      // Fanal perd une flamme de vie ; plus de vie : il repart de la dernière lanterne-relais
+      S.vies--; hud();
+      if (S.vies <= 0) reprendre();
     }
   }
 }
@@ -573,7 +631,7 @@ function frame(now) {
   const raw = (now - last) / 1000; last = now; qualite(raw);
   const dt = Math.min(1 / 30, raw);
   clock += dt;
-  if (S.state === 'jeu') { S.time += dt; updatePlayer(dt); updateGame(dt); }
+  if (S.state === 'jeu') { S.time += dt; updatePlayer(dt); updateGame(dt); updateParcours(dt); }
   else if (S.state === 'titre') { S.camHeading.applyAxisAngle(S.up, dt * 0.25); }
   if (planet && S.state !== 'cosmos') { animatePlanet(planet, dt, clock); updateOmbrelles(dt); if (faune) faune.update(dt, { pos: S.pos, actif: S.state === 'jeu' }); }
   if (S.state === 'jeu' || S.state === 'titre') vaisseau.animate(dt, 0, 0);

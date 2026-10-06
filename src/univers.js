@@ -162,10 +162,10 @@ export function planete(g, i) {
 // ---------- sauvegarde ----------
 const CLE = 'astres_eteints_v2';
 export function lireSauvegarde() {
-  try { const s = JSON.parse(localStorage.getItem(CLE)); if (s && s.allumes) return { ressources: {}, ramasse: {}, ...s }; } catch {}
+  try { const s = JSON.parse(localStorage.getItem(CLE)); if (s && s.allumes) return { ressources: {}, ramasse: {}, coffres: {}, liberes: {}, habitants: 0, memoires: 0, ...s }; } catch {}
   return null;
 }
-export function nouvellePartie() { return { galaxie: 0, debloquee: 0, allumes: {}, gardiens: 0, eclats: 0, temps: 0, ressources: {}, ramasse: {} }; }
+export function nouvellePartie() { return { galaxie: 0, debloquee: 0, allumes: {}, gardiens: 0, eclats: 0, temps: 0, ressources: {}, ramasse: {}, coffres: {}, liberes: {}, habitants: 0, memoires: 0 }; }
 export function sauver(s) { try { localStorage.setItem(CLE, JSON.stringify(s)); } catch {} }
 export const cle = (g, i) => `${g}-${i}`;
 export function phareAllume(s, g, i) { return !!s.allumes[cle(g, i)]; }

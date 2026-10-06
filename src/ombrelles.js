@@ -230,5 +230,22 @@ export function createOmbrelles(scene) {
     return evts;
   }
 
-  return { get liste() { return liste; }, peupler, vider, update, boss: () => liste.find(o => o.boss && o.etat !== 'fini') };
+  // coup de flamme de Fanal : les Ombrelles dans le rayon sont chassées (le boss perd une vie)
+  function frapper(pos, rayon) {
+    const evts = [];
+    for (const o of liste) {
+      if (o.etat === 'fini' || o.etat === 'disparait') continue;
+      const centre = tmp.copy(o.g.position).addScaledVector(o.dir, (0.5 + o.hop) * o.taille);
+      if (centre.distanceTo(pos) > rayon + 0.45 * o.taille) continue;
+      const p = centre.clone();
+      if (o.boss) {
+        if (o.pause > 0) continue;
+        if (--o.vie <= 0) { o.etat = 'disparait'; evts.push({ type: 'boss_vaincu', o, pos: p, coup: true }); }
+        else { o.pause = 1.6; o.vitesse *= 1.12; evts.push({ type: 'boss_touche', o, pos: p, coup: true }); }
+      } else { o.etat = 'disparait'; evts.push({ type: 'ecrase', o, pos: p, coup: true }); }
+    }
+    return evts;
+  }
+
+  return { get liste() { return liste; }, peupler, vider, update, frapper, boss: () => liste.find(o => o.boss && o.etat !== 'fini') };
 }
