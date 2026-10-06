@@ -41,7 +41,7 @@ const fanal = createFanal(glow, modeles);
 scene.add(fanal.object);
 const vaisseau = createVaisseau(glow, modeles);
 scene.add(vaisseau.object);
-const ombrelles = createOmbrelles(scene);
+const ombrelles = createOmbrelles(scene, modeles);
 const controls = createControls();
 
 // ---------- particules (étincelles) ----------
@@ -561,6 +561,11 @@ function updateOmbrelles(dt) {
     if (ev.type === 'rebond') { rebond(); sfx.jump(); }
     if (ev.type === 'repere') { sfx.repere(); if (!ev.o.boss) fanal.setMood('surpris', 0.5); }
     if (ev.type === 'balaye') burst(ev.pos, 20, 0xffd27a, 3);
+    if (ev.type === 'tir') sfx.tir();
+    if (ev.type === 'onde') sfx.onde();
+    if (ev.type === 'eclat_ombre') { burst(ev.pos, 22, 0x8a4fff, 4); onde(ev.pos, planet.surfacePoint(ev.pos.clone().normalize()).normalize(), 0x8a4fff); }
+    if (ev.type === 'eclat_neige') { burst(ev.pos, 40, 0xffffff, 6); sfx.ecrase(); }
+    if (ev.type === 'pique') { burst(ev.pos, 14, 0xffb000, 4); sfx.pique(); message('Aïe, des piquants !', 'Attends qu\'ils rentrent', 1300); }
     if (ev.type === 'ecrase') {
       rebond(); sfx.ecrase(); vibre('moyen'); fanal.setMood('ravi', 0.8); burst(ev.pos, 30, 0xb48cff, 5);
     }
