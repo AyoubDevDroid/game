@@ -24,6 +24,8 @@ export const PEUPLES = {
   gourmande: { nom: 'Mielins', forme: 'oreilles', corps: 0xffe6f2, deco: 0xff8ad8 },
   fetes: { nom: 'Lutins des neiges', forme: 'pointu', corps: 0xfff0e6, deco: 0xe0283f },
   bourg: { nom: 'Bourgeois du bourg', forme: 'paille', corps: 0xffe8c8, deco: 0xd9a441 },
+  ocean: { nom: 'Nageurs des abysses', forme: 'coquillage', corps: 0xd0f4ff, deco: 0x00a3c4 },
+  nuages: { nom: 'Gens des nuées', forme: 'antennes', corps: 0xfff4ff, deco: 0xb08cff },
 };
 
 // ---------- géométries partagées (jamais libérées) ----------

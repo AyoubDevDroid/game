@@ -345,18 +345,39 @@ function updatePlayer(dt) {
   const vt = projectOnPlane(S.vel.clone(), up);
   const target = wish.clone().multiplyScalar(RUN * mag);
   vt.lerp(target, 1 - Math.exp(-(S.onGround ? ACC_GROUND : ACC_AIR) * dt));
-  vr -= GRAVITY * dt;
+  // dans l'eau (monde océan) : on flotte, l'eau freine, et le saut donne un coup de nage
+  const prof = P.mer ? P.radius + P.mer - S.pos.distanceTo(P.center) : -1;
+  const nage = prof > 0.15;
+  if (nage) astuce('eau');
+  if (nage !== !!S.nage) { S.nage = nage; burst(S.pos, 14, 0xbff4ff, 3, up); if (nage) sfx.land(); }
+  if (nage) {
+    vr += (prof > 0.5 ? 7 : 2) * dt - GRAVITY * 0.12 * dt;
+    vr *= Math.exp(-2.2 * dt); vt.multiplyScalar(Math.exp(-1.2 * dt));
+    S.airJumps = 1;
+    if (Math.random() < 0.08) burst(S.pos.clone().addScaledVector(up, 0.8), 1, 0xdff8ff, 1, up);
+  } else vr -= GRAVITY * (P.gravite || 1) * dt;
+  // courants d'air (monde de nuages) : ils soulèvent Fanal
+  S.courant = false;
+  for (const c of P.courants || []) {
+    const rel = tmp3.copy(S.pos).addScaledVector(c.dir, -P.surface(c.dir)), h = rel.dot(c.dir);
+    if (h < -0.5 || h > c.haut) continue;
+    if (projectOnPlane(rel, c.dir).length() > c.rayon + 0.4) continue;
+    vr = Math.min(9, vr + 45 * dt); S.courant = true; S.onGround = false; S.airJumps = 1;
+  }
   // saut, puis double saut en l'air (petit délai de grâce juste après avoir quitté le sol)
   S.coyote = S.onGround ? COYOTE : Math.max(0, S.coyote - dt);
   if (controls.consumeJump()) {
-    if (S.onGround || S.coyote > 0) {
+    if (S.nage) {
+      vr = Math.max(vr, 6.5); sfx.jump(); fanal.spin(); burst(S.pos, 12, 0xbff4ff, 2, up);
+    } else if (S.onGround || S.coyote > 0) {
+      if (S.surNuage) { vr = JUMP * 1.35; sfx.jump2(); burst(S.pos, 16, 0xffffff, 3, up); } else
       vr = JUMP; S.onGround = false; S.coyote = 0; sfx.jump(); vibre('leger'); burst(S.pos, 8, 0xbfd0ff, 2, up);
     } else if (S.airJumps > 0) {
       S.airJumps--; vr = Math.max(vr, JUMP2); sfx.jump2(); vibre('leger'); fanal.spin(); burst(S.pos, 18, 0xff8ad8, 3, up);
     }
   }
   // planer : saut maintenu en tombant, l'écharpe freine la chute
-  S.plane = !!(save && save.pouvoirs && save.pouvoirs.planer) && !S.onGround && vr < 0 && controls.tenu('saut');
+  S.plane = !!(save && save.pouvoirs && save.pouvoirs.planer) && !S.onGround && !S.nage && vr < 0 && controls.tenu('saut');
   if (S.plane) { vr = Math.max(vr, -2.2); vt.lerp(wish.clone().multiplyScalar(RUN * mag), 1 - Math.exp(-6 * dt)); if (Math.random() < 0.4) burst(S.pos.clone().addScaledVector(up, 0.6), 1, 0x9ff6ff, 1); }
   S.vel.copy(vt).addScaledVector(up, vr);
   S.pos.addScaledVector(S.vel, dt);
@@ -373,6 +394,7 @@ function updatePlayer(dt) {
     S.onGround = true; S.airJumps = 1;
   } else if (dist > sol + 0.4) S.onGround = false;
 
+  S.surNuage = false;
   // objets solides (rochers, blocs, îlots flottants, troncs) : on monte dessus, ils bloquent sur le côté
   for (const o of P.solides) {
     const rel = tmp3.copy(S.pos).addScaledVector(o.dir, -P.surface(o.dir));
@@ -385,6 +407,11 @@ function updatePlayer(dt) {
     if (h >= o.haut - 0.45) {
       if (vrO > 0.5) continue;                                // il monte encore : on le laisse passer au-dessus
       S.pos.addScaledVector(o.dir, o.haut - h);                // posé sur le dessus
+      if (o.rebond) { S.surNuage = true; astuce('nuages'); }
+      if (o.rebond && vrO < -5) {                              // un nuage : ça rebondit !
+        S.vel.addScaledVector(o.dir, -vrO * 1.6); S.onGround = false; sfx.jump(); fanal.land(); burst(S.pos, 10, 0xffffff, 3, o.dir);
+        continue;
+      }
       if (vrO < 0) {
         if (!S.onGround && vrO < -8) { sfx.land(); fanal.land(); burst(S.pos, 6, 0xffd6f0, 2, o.dir); }
         S.vel.addScaledVector(o.dir, -vrO);

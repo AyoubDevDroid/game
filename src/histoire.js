@@ -19,6 +19,8 @@ export const ASTUCES = {
   allume: 'Regarde ces couleurs ! La planète revit. Quand tu veux, remonte dans la Luciole pour la planète suivante.',
   touche: 'Aïe ! Fais attention, chaque coup d\'ombre éteint une de tes trois flammes. Les flammèches roses te soignent.',
   boss: 'Le Grand Phare… La Grande Ombrelle le garde. Saute-lui dessus quand elle fonce, et ne reste pas sous elle !',
+  eau: 'Tu nages ! Appuie sur saut pour donner un coup de nage. L’eau te porte, alors n’aie pas peur d’aller voir au fond : il y a sûrement des trésors.',
+  nuages: 'Ici, la gravité est toute légère ! Les nuages te font rebondir, et saute depuis un nuage pour aller encore plus haut. Les courants d’air te soulèvent, eux aussi.',
   galaxie: 'Une galaxie entière brille de nouveau ! La Luciole peut sauter vers la suivante. Je suis si fière de toi.',
 };
 

@@ -145,6 +145,12 @@ const THEMES = {
     escalier: ['p_block-grass-low-large', 'v_rock-wide', 'p_block-grass-large-tall'], ilot: 'n_platform_grass', cachette: ['v_stall-red'],
     deco: ['v_fountain-round', 'v_banner-red', 'v_fence', 'v_pillar-stone', 'v_lantern'], feuillage: null },
 };
+// océan : un jardin sous-marin (coraux, cristaux, épaves) ; nuages : des arbres en barbe à papa
+THEMES.ocean = { ...THEMES.lagon, arbres: ['n_mushroom_redTall', 's_rock_crystalsLargeA', 'n_tree_palmTall'], champis: ['n_mushroom_redGroup', 's_rock_crystalsLargeB', 'p_mushrooms'],
+  petits: ['n_lily_large', 's_rock_crystals', 'n_grass_leafsLarge'], deco: ['n_canoe', 'p_chest', 'p_barrel'], feuillage: 0xff7fb0 };
+THEMES.nuages = { ...THEMES.menthe, arbres: ['n_tree_fat', 'n_tree_blocks', 'n_tree_default'], champis: ['n_mushroom_redGroup', 'p_mushrooms'],
+  rochers: ['p_block-snow', 'n_stone_largeB', 'p_block-snow-large-tall'], escalier: ['p_block-snow-low-large', 'p_block-snow', 'p_block-snow-large-tall'],
+  ilot: 'n_platform_grass', deco: ['p_flag', 'n_sign', 'p_crate'], feuillage: 0xffc6ef };
 
 // ---------- chargement des modèles (une fois, au démarrage) ----------
 const MODELES = {};

@@ -186,6 +186,8 @@ export function createPlanet(scene, glow, modeles, L, allume = false, ramasses =
     else if (L.forme === 'dunes') h = L.relief * (Math.sin(d.dot(axeDunes) * L.radius * 0.55 + n * 4) * 0.9 + n);
     else h = L.relief * 2 * n;
     const a = d.angleTo(bDir);
+    // océan : une île sous la Luciole (le reste de la planète est plus bas, sous la mer)
+    if (L.mer) h += 1.6 * Math.exp(-((d.angleTo(Y) / (0.5 * k)) ** 2)) - 0.6;
     return h + L.bosse.h * Math.exp(-((a / (L.bosse.w * k)) ** 2));
   };
   planet.surface = d => L.radius + hauteur(d);
@@ -270,10 +272,62 @@ export function createPlanet(scene, glow, modeles, L, allume = false, ramasses =
   const arrivee = bDir.clone().applyAxisAngle(new THREE.Vector3().crossVectors(bDir, depart).normalize(), 2.6 / L.radius);
   const chemin = tracerChemin({ ...ctxP, depart, arrivee });
   const avec3D = decorsPrets();
+  // ---- monde océan : une mer qui recouvre la planète, d'où émergent des îles ----
+  if (L.mer) {
+    const eau = new THREE.Mesh(new THREE.IcosahedronGeometry(L.radius + L.mer, 6),
+      allumable(new THREE.MeshStandardMaterial({ color: 0x2fb8d9, emissive: 0x0a4a6a, emissiveIntensity: 0.25, roughness: 0.08, metalness: 0.1, transparent: true, opacity: 0.62, depthWrite: false }), U));
+    eau.renderOrder = 2;
+    planet.group.add(eau); planet.eau = eau;
+  }
+  // ---- monde de nuages : des nuages flottants qui font rebondir, et des courants d'air qui soulèvent ----
+  planet.courants = [];
+  const coinsNuages = [];
+  if (L.nuages) {
+    const boule = new THREE.SphereGeometry(1, 14, 10), lots = [];
+    const ajouterNuage = (d, bas, taille) => {
+      const n = 3 + Math.floor(r() * 3), base = planet.surfacePoint(d).addScaledVector(d, bas);
+      const t1 = new THREE.Vector3().crossVectors(d, Math.abs(d.y) < 0.9 ? Y : new THREE.Vector3(1, 0, 0)).normalize(), t2 = new THREE.Vector3().crossVectors(d, t1);
+      for (let j = 0; j < n; j++) {
+        const a = (j / n) * Math.PI * 2, rr = j === 0 ? 0 : taille * 0.55;
+        const p = base.clone().addScaledVector(t1, Math.cos(a) * rr).addScaledVector(t2, Math.sin(a) * rr);
+        const s = taille * (j === 0 ? 0.8 : 0.55 + r() * 0.15);
+        lots.push(new THREE.Matrix4().compose(p, new THREE.Quaternion().setFromUnitVectors(Y, d), new THREE.Vector3(s * 1.1, s * 0.45, s * 1.1)));
+      }
+      planet.solides.push({ dir: d.clone(), radius: taille * 0.95, bas: bas - taille * 0.25, haut: bas + taille * 0.3, rebond: true });
+      return bas + taille * 0.3;
+    };
+    // trois spirales de nuages qui montent de plus en plus haut, et des nuages isolés
+    for (let s = 0; s < 3; s++) {
+      let d = freeDir(0.5), cap = new THREE.Vector3().crossVectors(d, randomDir(r)).normalize(), bas = 1.6;
+      for (let j = 0; j < 7; j++) {
+        const top = ajouterNuage(d, bas, 1.5 + r() * 0.6);
+        if (j === 6 || r() < 0.25) coinsNuages.push({ dir: d.clone(), h: top + 0.9 });
+        d = d.clone().addScaledVector(cap, 3.4 / L.radius).normalize(); cap.applyAxisAngle(d, 0.5).normalize();
+        bas += 1.4 + r() * 0.5;
+      }
+      marquer(d, 0.3);
+    }
+    for (let j = 0; j < 10; j++) { const d = freeDir(0.4); ajouterNuage(d, 1.4 + r() * 3, 1.3 + r() * 0.6); }
+    const mi = new THREE.InstancedMesh(boule, allumable(new THREE.MeshStandardMaterial({ color: 0xfff6ff, emissive: 0xd9c8ff, emissiveIntensity: 0.25, roughness: 0.9 }), U), lots.length);
+    lots.forEach((m, i) => mi.setMatrixAt(i, m)); mi.instanceMatrix.needsUpdate = true; mi.computeBoundingSphere();
+    planet.group.add(mi);
+    // courants d'air : des colonnes de particules qui tourbillonnent vers le haut
+    for (let j = 0; j < 5; j++) {
+      const d = freeDir(0.5); marquer(d, 0.4);
+      const n = 60, pos = new Float32Array(n * 3), g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+      const pts = new THREE.Points(g, new THREE.PointsMaterial({ size: 0.35, map: glow, color: 0xbfe8ff, transparent: true, opacity: 0.8, depthWrite: false, blending: THREE.AdditiveBlending }));
+      pts.frustumCulled = false; planet.group.add(pts);
+      planet.courants.push({ dir: d, rayon: 1.4, haut: 12, g, pos, n, ph: r() * 6 });
+    }
+  }
+  planet.coinsNuages = coinsNuages;
+  planet.mer = L.mer || 0; planet.gravite = L.gravite || 1;
   let coins = avec3D ? amenager({ L, r, k, center, U, group: planet.group, surfacePoint: planet.surfacePoint, freeDir, marquer, allumable, solides: planet.solides }) : [];
   for (let i = coins.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [coins[i], coins[j]] = [coins[j], coins[i]]; }
   const nbCoinsBraises = Math.ceil(L.embers * 0.6), coinsRestants = coins.slice(nbCoinsBraises);
   coins = coins.slice(0, nbCoinsBraises);
+  // sur un monde de nuages, une partie des braises est tout en haut des spirales de nuages
+  for (const c of planet.coinsNuages) if (coins.length > 1) coins[Math.floor(r() * coins.length)] = c;
 
   // ---- braises : d'abord dans les coins à explorer (sommets, îlots, cachettes), puis ailleurs ----
   planet.embers = [];
@@ -437,6 +491,17 @@ export function createPlanet(scene, glow, modeles, L, allume = false, ramasses =
 
 // Animation de la planète (appelée à chaque image)
 export function animatePlanet(p, dt, clock) {
+  for (const c of p.courants || []) {
+    const t1 = new THREE.Vector3().crossVectors(c.dir, Math.abs(c.dir.y) < 0.9 ? Y : new THREE.Vector3(1, 0, 0)).normalize(), t2 = new THREE.Vector3().crossVectors(c.dir, t1);
+    const base = p.surfacePoint(c.dir);
+    for (let i = 0; i < c.n; i++) {
+      const h = ((i / c.n) * c.haut + clock * 4) % c.haut, a = i * 2.4 + clock * 3 + c.ph, rr = c.rayon * (0.4 + 0.6 * ((i * 7) % 10) / 10);
+      const q = base.clone().addScaledVector(c.dir, h).addScaledVector(t1, Math.cos(a) * rr).addScaledVector(t2, Math.sin(a) * rr);
+      c.pos.set([q.x, q.y, q.z], i * 3);
+    }
+    c.g.attributes.position.needsUpdate = true;
+  }
+  if (p.eau) p.eau.rotation.y += dt * 0.02;
   animerParcours(p, dt, clock);
   // ressources : elles tournent et flottent ; celles qu'on a prises disparaissent
   const res = p.ressources;

@@ -63,6 +63,11 @@ export const BIOMES = [
     decors: [['cristalBleu', 10], ['rocher', 6]] },
   { nom: 'bourg', sol: { bas: 0x7fbf3f, base: 0xa8e05a, haut: 0xd4f58a, bosse: 0xe0c48a }, motif: 1, motifCol: 0xffffff, herbe: 0x5f9a2f,
     decors: [['maison', 6], ['touffe', 30], ['rocher', 6]] },
+  // mondes d'eau et de nuages : on y nage, on y rebondit
+  { nom: 'ocean', sol: { bas: 0x1f6f8a, base: 0x3fb8b0, haut: 0xf2d79a, bosse: 0xffe2a8 }, motif: 1, motifCol: 0xffffff, herbe: 0x2f9a6a,
+    decors: [['rocher', 10], ['touffe', 20]], mer: true },
+  { nom: 'nuages', sol: { bas: 0xb8a6ff, base: 0xd6c8ff, haut: 0xfff0ff, bosse: 0xffe6f6 }, motif: 3, motifCol: 0xffffff, scale: 5, herbe: 0x9a86e6,
+    decors: [['touffe', 14], ['champiRose', 6]], nuages: true },
 ];
 
 const DEBUT = ['Bru', 'Cen', 'Givr', 'Ver', 'Sab', 'Cor', 'Lag', 'Vol', 'Ast', 'Lum', 'Mir', 'Pla', 'Nim', 'Fla', 'Bri', 'Sel', 'Ond', 'Pom', 'Zé', 'Cal', 'Oré', 'Til', 'Mou', 'Pé'];
@@ -121,6 +126,10 @@ function ordreBiomes(g) {
   const r = rng(77 + g * 13), ordre = BIOMES.map((_, k) => k);
   for (let k = ordre.length - 1; k > 0; k--) { const j = Math.floor(r() * (k + 1)); [ordre[k], ordre[j]] = [ordre[j], ordre[k]]; }
   if (g === 0) { ordre.splice(ordre.indexOf(0), 1); ordre.splice(ordre.indexOf(1), 1); ordre.unshift(0, 1); }   // Brumelune, Cendrine
+  for (const [nom, place] of [['ocean', 2], ['nuages', 4]]) {           // l'océan et les nuages arrivent tôt dans chaque galaxie
+    const k = BIOMES.findIndex(b => b.nom === nom), j = ordre.indexOf(k);
+    if (j > place + 3 * (g % 3)) { ordre.splice(j, 1); ordre.splice(place + 3 * (g % 3), 0, k); }
+  }
   return ordre;
 }
 
@@ -140,15 +149,17 @@ export function planete(g, i) {
   const tirer = () => DEBUT[Math.floor(r() * DEBUT.length)] + (r() < 0.5 ? MILIEU[Math.floor(r() * MILIEU.length)] : '') + FIN[Math.floor(r() * FIN.length)];
   let nom = boss ? 'Le Grand Phare' : g === 0 && i === 0 ? 'Brumelune' : g === 0 && i === 1 ? 'Cendrine' : tirer();
   while (/vermin|merd|pute|cul|con[en]|nul/i.test(nom)) nom = tirer();   // pas de nom malheureux
-  const radius = boss ? 13 : Math.round(15 + r() * 7 + g * 0.3);
+  const radius = boss ? 13 : biome.nuages ? 11 : Math.round(15 + r() * 7 + g * 0.3);
   const dir = () => { const u = r() * 2 - 1, a = r() * Math.PI * 2, s = Math.sqrt(1 - u * u); return [s * Math.cos(a), u, s * Math.sin(a)]; };
   let beacon = dir();
   while (beacon[1] > 0.2) beacon = dir();                 // le phare n'est jamais juste à côté du vaisseau
   return {
     g, i, seed, nom, boss, radius, biome: biome.nom,
     sol, motif: biome.motif, motifCol: pal.motif, scale: biome.scale, herbe: pal.herbe, decors: biome.decors,
-    palette: pal, humeur: hu, forme, signature, ressource,
-    beacon, relief: 0.5 + r() * 0.5, freq: 1 + r() * 0.6, bosse: { h: 1.2 + r() * 1.2, w: 0.25 + r() * 0.12 },
+    palette: pal, humeur: hu, forme: biome.mer || biome.nuages ? 'doux' : forme, signature: biome.nuages && signature === 'canyon' ? 'jardin' : signature, ressource,
+    mer: biome.mer ? 0.35 : 0,                             // niveau de la mer au-dessus du rayon (planète océan)
+    nuages: !!biome.nuages, gravite: biome.nuages ? 0.72 : 1,
+    beacon, relief: biome.mer ? 1.25 : biome.nuages ? 0.35 : 0.5 + r() * 0.5, freq: 1 + r() * 0.6, bosse: { h: 1.2 + r() * 1.2, w: 0.25 + r() * 0.12 },
     embers: boss ? 4 : 7 + Math.floor(r() * 4) + Math.floor(g / 4),
     ombrelles: boss ? 2 + Math.floor(g / 3) : Math.min(12, 2 + Math.floor(radius / 6) + Math.floor(g * 0.6)),
     vitesse: 3.4 + g * 0.12,                               // vitesse des Ombrelles (Fanal court à 7,5)

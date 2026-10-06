@@ -197,7 +197,7 @@ const FORMES = {
 const ROSTER = {
   menthe: ['marcheuse', 'sauteuse'], lave: ['herisson', 'marcheuse'], volcan: ['herisson', 'sauteuse'], 'étoilée': ['follet', 'marcheuse', 'meduse'],
   givre: ['givron', 'sauteuse'], fetes: ['givron', 'marcheuse'], verdoyance: ['marcheuse', 'tireuse', 'sauteuse'], dunes: ['crabe', 'herisson'],
-  corail: ['gelee', 'crabe'], marais: ['follet', 'gelee'], lagon: ['crabe', 'meduse'], hantee: ['follet', 'marcheuse'],
+  corail: ['gelee', 'crabe'], marais: ['follet', 'gelee'], lagon: ['crabe', 'meduse'], ocean: ['meduse', 'crabe', 'gelee'], nuages: ['follet', 'sauteuse', 'tireuse'], hantee: ['follet', 'marcheuse'],
   pirate: ['crabe', 'tireuse'], royaume: ['tireuse', 'marcheuse'], gourmande: ['gelee', 'sauteuse'], bourg: ['tireuse', 'marcheuse'],
 };
 // modèles 3D (public/modeles/<nom>.glb) et leur hauteur dans le jeu

@@ -17,7 +17,7 @@ const ESPECES = {
 const FAUNE = {
   menthe: ['bunny', 'deer', 'fox', 'bee'], lave: ['caterpillar', 'hog', 'crab'], 'étoilée': ['cat', 'koala', 'bee'],
   givre: ['penguin', 'polar', 'deer'], verdoyance: ['cow', 'pig', 'chick', 'bunny'], dunes: ['lion', 'giraffe', 'elephant'],
-  corail: ['pig', 'cat', 'chick', 'crab'], marais: ['beaver', 'caterpillar', 'hog'], lagon: ['crab', 'parrot', 'monkey'],
+  corail: ['pig', 'cat', 'chick', 'crab'], marais: ['beaver', 'caterpillar', 'hog'], lagon: ['crab', 'parrot', 'monkey'], ocean: ['crab', 'parrot', 'penguin'], nuages: ['parrot', 'chick', 'bee', 'bunny'],
   volcan: ['hog', 'crab', 'beaver'], hantee: ['cat', 'caterpillar', 'beaver'], pirate: ['parrot', 'crab', 'monkey'],
   royaume: ['cow', 'dog', 'deer'], gourmande: ['bunny', 'chick', 'pig', 'bee'], fetes: ['penguin', 'polar', 'deer'],
   bourg: ['dog', 'cat', 'chick', 'cow'],
