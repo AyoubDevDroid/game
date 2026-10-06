@@ -238,7 +238,7 @@ function charger(g, i, arrivee = false) {
   S.up.set(0, Math.cos(a), Math.sin(a));
   S.pos.copy(planet.surfacePoint(S.up)); S.vel.set(0, 0, 0);
   S.face.set(1, 0, 0); projectOnPlane(S.face, S.up).normalize(); S.camHeading.copy(S.face);
-  S.onGround = true; S.invuln = 0; S.vies = 3; S.reprise = null;
+  S.onGround = true; S.invuln = 0; S.vies = 3; S.reprise = null; S.sur = null; S.support = null;
   S.power = planet.embers.filter(e => e.taken).length;
   fanal.object.visible = true; fanal.setMood(allume ? 'content' : 'surpris', 1);
   if (save) { save.ici = { g, i }; save.galaxie = g; sauver(save); }
@@ -351,6 +351,7 @@ function reperer(t) {
 // ---------- logique sur la planète ----------
 function updatePlayer(dt) {
   const P = planet;
+  if (S.support && S.onGround) S.pos.add(S.support.deplacement);   // posé sur une plateforme qui bouge : elle l'emporte
   const up = tmp.copy(S.pos).sub(P.center).normalize();
   S.up.copy(up);
 
@@ -419,7 +420,12 @@ function updatePlayer(dt) {
     S.onGround = true; S.airJumps = 1;
   } else if (dist > sol + 0.4) S.onGround = false;
 
-  S.surNuage = false;
+  S.surNuage = false; S.support = null;
+  // archipel : on retient la dernière île touchée ; tombé dans les nuages, on y revient
+  if (P.abime) {
+    if (S.onGround && P.terre(n)) { S.sur = n.clone(); astuce('archipel'); }
+    if (dist < P.abime) chute();
+  }
   // objets solides (rochers, blocs, îlots flottants, troncs) : on monte dessus, ils bloquent sur le côté
   for (const o of P.solides) {
     const rel = tmp3.copy(S.pos).addScaledVector(o.dir, -P.surface(o.dir));
@@ -433,6 +439,11 @@ function updatePlayer(dt) {
       if (vrO > 0.5) continue;                                // il monte encore : on le laisse passer au-dessus
       S.pos.addScaledVector(o.dir, o.haut - h);                // posé sur le dessus
       if (o.rebond) { S.surNuage = true; astuce('nuages'); }
+      if (o.mobile) S.support = o;
+      if (o.ressort && vrO < -1) {                             // nuage-ressort : il renvoie toujours bien haut
+        S.vel.addScaledVector(o.dir, -vrO + 15); S.onGround = false; S.airJumps = 1; sfx.jump2(); fanal.spin(); burst(S.pos, 16, 0xffd6f6, 4, o.dir);
+        continue;
+      }
       if (o.rebond && vrO < -5) {                              // un nuage : ça rebondit !
         S.vel.addScaledVector(o.dir, -vrO * 1.6); S.onGround = false; sfx.jump(); fanal.land(); burst(S.pos, 10, 0xffffff, 3, o.dir);
         continue;
@@ -558,6 +569,14 @@ function updateGame(dt) {
 
 // ---------- le parcours : relais, coffres, flammèches, habitants ----------
 // plus de vie : Fanal se rallume à la dernière lanterne-relais (ou près de la Luciole)
+function chute() {
+  sfx.touche(); vibre('fort'); fanal.setMood('peur', 1.2); burst(S.pos, 30, 0xffffff, 4);
+  const d = (S.sur || new THREE.Vector3(0, 1, 0)).clone();
+  S.up.copy(d); S.pos.copy(planet.surfacePoint(d)).addScaledVector(d, 0.6); S.vel.set(0, 0, 0); S.onGround = false; S.invuln = 1.2;
+  updateCamera(0, true);
+  S.vies--; hud();
+  if (S.vies <= 0) reprendre(); else message('Plouf dans les nuages !', 'Fanal perd une flamme', 1300);
+}
 function reprendre() {
   fondu(true);
   setTimeout(() => {

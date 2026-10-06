@@ -244,7 +244,7 @@ export function amenager(ctx) {
   const lots = new Map();                                   // id → [Matrix4]
   const coins = [];
   const choix = liste => liste[Math.floor(r() * liste.length)];
-  const surface = 1 / (k * k);                              // une planète de rayon 9 vaut 1
+  const surface = (ctx.densite || 1) / (k * k);            // une planète de rayon 9 vaut 1 (archipel : seulement la surface des îles)
 
   // repère tangent en dir : pour placer les morceaux d'un ensemble les uns par rapport aux autres
   const repere = (dir, ang) => {

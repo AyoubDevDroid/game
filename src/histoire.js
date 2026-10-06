@@ -21,6 +21,7 @@ export const ASTUCES = {
   boss: 'Le Grand Phare… La Grande Ombrelle le garde. Saute-lui dessus quand elle fonce, et ne reste pas sous elle !',
   eau: 'Tu nages ! Appuie sur saut pour donner un coup de nage. L’eau te porte, alors n’aie pas peur d’aller voir au fond : il y a sûrement des trésors.',
   nuages: 'Ici, la gravité est toute légère ! Les nuages te font rebondir, et saute depuis un nuage pour aller encore plus haut. Les courants d’air te soulèvent, eux aussi.',
+  archipel: 'Un archipel dans les nuages ! Attention au vide : si tu tombes, tu perds une flamme et tu repars de la dernière île. Prends les plateformes et les nuages-ressorts pour traverser.',
   galaxie: 'Une galaxie entière brille de nouveau ! La Luciole peut sauter vers la suivante. Je suis si fière de toi.',
 };
 

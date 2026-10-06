@@ -208,6 +208,52 @@ export function createPlanet(scene, glow, modeles, L, allume = false, ramasses =
   // océan : un archipel d'îles où poser les pieds entre deux baignades
   const ri = rng(L.seed * 5 + 2);
   const iles = L.mer ? Array.from({ length: Math.round(L.radius / 5) }, () => ({ d: randomDir(ri), h: 1.6 + ri() * 1.2, w: 0.6 + ri() * 0.5 })) : [];
+  // archipel : des îles posées sur une mer de nuages, de la Luciole jusqu'au phare (+ des îles secrètes plus hautes)
+  const archi = L.archipel ? (() => {
+    const ra = rng(L.seed * 11 + 4), R = L.radius, axe = new THREE.Vector3().crossVectors(Y, bDir).normalize();
+    const A = Y.angleTo(bDir) * R, iles = [], liens = [];
+    const pointArc = (u, lat) => {
+      const d = Y.clone().applyAxisAngle(axe, u / R), cote = new THREE.Vector3().crossVectors(d, axe).normalize();
+      return d.addScaledVector(cote, lat / R).normalize();
+    };
+    iles.push({ d: Y.clone(), rad: 10.5, h: 1 });
+    // le trajet serpente : Luciole → premier détour → second détour → phare
+    const detour = (de, ang) => de.clone().applyAxisAngle(randomDir(ra).cross(de).normalize(), ang);
+    const cibles = [detour(Y, 1.1 + ra() * 0.4), detour(bDir, 0.9 + ra() * 0.4), bDir];
+    let prec = iles[0], n = 0, ci = 0;
+    for (let pas = 0; pas < 40 && ci < cibles.length; pas++) {
+      const cible = cibles[ci], dernier = ci === cibles.length - 1;
+      const long = n % 2 === 1, gap = long ? 9 + ra() * 3.5 : 3 + ra() * 2.5, rad = 5 + ra() * 2.5;   // un trou sur deux demande un pont
+      const reste = prec.d.angleTo(cible) * R;
+      if (dernier && reste < prec.rad + gap + 2 * rad + 9.5) break;                      // assez près du phare
+      if (!dernier && reste < prec.rad + gap + rad) { ci++; continue; }
+      const ax = new THREE.Vector3().crossVectors(prec.d, cible).normalize();
+      const d = prec.d.clone().applyAxisAngle(ax, (prec.rad + gap + rad) / R);
+      d.addScaledVector(new THREE.Vector3().crossVectors(d, ax).normalize(), (ra() - 0.5) * 4 / R).normalize();
+      if (iles.some(o => o !== prec && o.d.angleTo(d) * R < o.rad + rad + 3) || d.angleTo(bDir) * R < rad + 13) { ci++; continue; }
+      const ile = { d, rad, h: THREE.MathUtils.clamp(prec.h + (ra() - 0.35) * 2.2, 0.5, 5) };
+      iles.push(ile); liens.push({ a: prec, b: ile, gap, long }); prec = ile; n++;
+    }
+    const fin = { d: bDir.clone(), rad: 9.5, h: Math.min(prec.h + 0.5, 3) };
+    const gapFin = prec.d.angleTo(bDir) * R - prec.rad - fin.rad;
+    iles.push(fin); liens.push({ a: prec, b: fin, gap: gapFin, long: gapFin > 7 });
+    const chaine = iles.slice(1, -1);
+    // points du trajet principal (îles et trous) : les îles secrètes et leurs courants restent à l'écart
+    const trajet = [];
+    for (const l of liens) for (let t = 0; t <= 1; t += 0.125) trajet.push(l.a.d.clone().lerp(l.b.d, t).normalize());
+    const libre = (d, marge) => trajet.every(q => q.angleTo(d) * R > marge) && iles.every(o => o.d.angleTo(d) * R > o.rad + marge);
+    for (let s = 0, essais = 0; s < 4 && chaine.length && essais < 40; essais++) {
+      const base = chaine[Math.floor(ra() * chaine.length)];
+      const cote = new THREE.Vector3().crossVectors(base.d, axe).normalize().multiplyScalar(ra() < 0.5 ? -1 : 1);
+      const rad = 4 + ra() * 1.5, gap = 5 + ra() * 2;
+      const d = base.d.clone().addScaledVector(cote, (base.rad + gap + rad) / R).normalize();
+      const milieu = base.d.clone().addScaledVector(cote, (base.rad + gap / 2) / R).normalize();
+      if (!libre(d, rad + 4) || trajet.some(q => q.angleTo(milieu) * R < base.rad + 1.5 && q.angleTo(base.d) * R > 0.5)) continue;
+      const ile = { d, rad, h: base.h + 3 + ra() * 2, secrete: true };
+      iles.push(ile); liens.push({ a: base, b: ile, gap, secret: true }); s++;
+    }
+    return { iles, liens, ra };
+  })() : null;
   const hauteur = d => {
     const p = d.clone().multiplyScalar(freq * 2).add(seedV);
     const n = bruit(p.x, p.y, p.z) * 0.65 + bruit(p.x * 2.3, p.y * 2.3, p.z * 2.3) * 0.35 - 0.5;
@@ -217,6 +263,11 @@ export function createPlanet(scene, glow, modeles, L, allume = false, ramasses =
     else if (L.forme === 'dunes') h = L.relief * (Math.sin(d.dot(axeDunes) * L.radius * 0.55 + n * 4) * 0.9 + n);
     else h = L.relief * 2 * n;
     const a = d.angleTo(bDir);
+    if (archi) {                                             // plateaux aux bords en falaise, le reste plonge sous les nuages
+      let sv = 0, hi = 0;
+      for (const ile of archi.iles) { const du = d.angleTo(ile.d) * L.radius, v = 1 - THREE.MathUtils.smoothstep(du, ile.rad - 1.4, ile.rad); if (v > sv) { sv = v; hi = ile.h; } }
+      return THREE.MathUtils.lerp(-6, hi + h * 0.25 + L.bosse.h * 0.6 * Math.exp(-((a / (L.bosse.w * k)) ** 2)), sv);
+    }
     // océan : une île sous la Luciole (le reste de la planète est plus bas, sous la mer)
     if (L.mer) {
       h += 2.4 * Math.exp(-((d.angleTo(Y) / (1.2 * k)) ** 2)) - 0.6;
@@ -226,13 +277,14 @@ export function createPlanet(scene, glow, modeles, L, allume = false, ramasses =
   };
   planet.surface = d => L.radius + hauteur(d);
   planet.surfacePoint = d => center.clone().addScaledVector(d, planet.surface(d));
+  planet.terre = d => !archi || planet.surface(d) > L.radius - 0.5;      // archipel : sur une île (pas au-dessus du vide)
 
   // sol : sphère déformée, couleurs selon l'altitude
   let geo = new THREE.IcosahedronGeometry(1, Math.round(L.radius * 1.3));
   geo.deleteAttribute('normal'); geo.deleteAttribute('uv');
   geo = mergeVertices(geo);
   const P = geo.attributes.position, col = new Float32Array(P.count * 3), d = new THREE.Vector3(), c = new THREE.Color();
-  const cBas = new THREE.Color(L.sol.bas), cBase = new THREE.Color(L.sol.base), cHaut = new THREE.Color(L.sol.haut), cBosse = new THREE.Color(L.sol.bosse);
+  const cBas = new THREE.Color(L.sol.bas), cBase = new THREE.Color(L.sol.base), cHaut = new THREE.Color(L.sol.haut), cBosse = new THREE.Color(L.sol.bosse), cFalaise = new THREE.Color(L.palette ? L.palette.terre : 0xb08060);
   for (let i = 0; i < P.count; i++) {
     d.fromBufferAttribute(P, i).normalize();
     const h = hauteur(d);
@@ -243,7 +295,8 @@ export function createPlanet(scene, glow, modeles, L, allume = false, ramasses =
       const q = d.clone().multiplyScalar(7 / k).add(seedV);
       c.multiplyScalar(0.88 + 0.24 * (bruit(q.x, q.y, q.z) * 0.6 + bruit(q.x * 3, q.y * 3, q.z * 3) * 0.4));
     }
-    c.lerp(cBosse, Math.exp(-((d.angleTo(bDir) / (L.bosse.w * k * 0.8)) ** 2)) * 0.85);
+    if (archi && h < -0.2) c.copy(cFalaise).multiplyScalar(0.62 + 0.38 * THREE.MathUtils.clamp((h + 6) / 6, 0, 1));
+    else c.lerp(cBosse, Math.exp(-((d.angleTo(bDir) / (L.bosse.w * k * 0.8)) ** 2)) * 0.85);
     col.set([c.r, c.g, c.b], i * 3);
   }
   geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
@@ -289,7 +342,7 @@ export function createPlanet(scene, glow, modeles, L, allume = false, ramasses =
     let n = 0;
     for (let t = 0; t < touffes; t++) {
       const d0 = randomDir(rh);
-      if (L.mer && planet.surface(d0) < L.radius + L.mer + 0.05) continue;        // pas d'herbe sous l'eau
+      if ((L.mer && planet.surface(d0) < L.radius + L.mer + 0.05) || !planet.terre(d0)) continue;        // pas d'herbe sous l'eau
       const teinte = 0.85 + rh() * 0.3;
       for (let b = 0; b < parTouffe; b++) {
         const d = d0.clone().addScaledVector(randomDir(rh), 0.35 / L.radius).normalize();
@@ -345,7 +398,8 @@ export function createPlanet(scene, glow, modeles, L, allume = false, ramasses =
   // le vaisseau se pose en haut (+Y) : grande zone dégagée autour de lui
   const used = [{ d: Y.clone(), a: 0.6 }, { d: bDir.clone(), a: 0.8 }];
   const freeDir = minA => {
-    for (let n = 0; n < 300; n++) { const dd = randomDir(r); if (used.every(u => u.d.angleTo(dd) > Math.max(minA, u.a) * k)) return dd; }
+    for (let n = 0; n < 300; n++) { const dd = randomDir(r); if (planet.terre(dd) && used.every(u => u.d.angleTo(dd) > Math.max(minA, u.a) * k)) return dd; }
+    for (let n = 0; n < 300; n++) { const dd = randomDir(r); if (planet.terre(dd)) return dd; }
     return randomDir(r);
   };
   const marquer = (d, a = 0.3) => used.push({ d: d.clone(), a });
@@ -357,7 +411,7 @@ export function createPlanet(scene, glow, modeles, L, allume = false, ramasses =
   const ctxP = { L, r, k, group: planet.group, surfacePoint: planet.surfacePoint, placeOn, marquer, glow, U, allumable, obstacles: planet.obstacles, solides: planet.solides };
   const depart = new THREE.Vector3(0, Math.cos(6 / L.radius), Math.sin(6 / L.radius));
   const arrivee = bDir.clone().applyAxisAngle(new THREE.Vector3().crossVectors(bDir, depart).normalize(), 2.6 / L.radius);
-  const chemin = tracerChemin({ ...ctxP, depart, arrivee });
+  const chemin = tracerChemin({ ...ctxP, depart, arrivee, terre: planet.terre, etapes: archi ? archi.iles.filter(o => !o.secrete).map(o => o.d) : null });
   const avec3D = decorsPrets();
   // ---- monde océan : une mer qui recouvre la planète, d'où émergent des îles ----
   if (L.mer) {
@@ -408,8 +462,72 @@ export function createPlanet(scene, glow, modeles, L, allume = false, ramasses =
     }
   }
   planet.coinsNuages = coinsNuages;
+  // ---- archipel : mer de nuages, plateformes mobiles, nuages-ressorts et courants d'air entre les îles ----
+  planet.mobiles = [];
+  if (archi) {
+    const R = L.radius, ra = archi.ra;
+    planet.abime = R - 2.3;                                   // plus bas que ça : Fanal est tombé dans les nuages
+    planet.group.add(new THREE.Mesh(new THREE.IcosahedronGeometry(R - 1.6, 6),
+      allumable(new THREE.MeshLambertMaterial({ color: 0xf8f4ff, emissive: 0xc8b8ff, emissiveIntensity: 0.2 }), U)));
+    // gros flocons sur la mer : du volume
+    const np = 1100, pp = new Float32Array(np * 3); let nf = 0;
+    for (let t = 0; t < np * 3 && nf < np; t++) {
+      const d = randomDir(ra); if (planet.surface(d) > R - 1.2) continue;
+      const q = d.multiplyScalar(R - 1.7 + ra() * 0.9); pp.set([q.x, q.y, q.z], nf * 3); nf++;
+    }
+    const fg = new THREE.BufferGeometry(); fg.setAttribute('position', new THREE.BufferAttribute(pp.subarray(0, nf * 3), 3));
+    planet.group.add(new THREE.Points(fg, new THREE.PointsMaterial({ size: 7, map: glow, color: 0xffffff, transparent: true, opacity: 0.75, depthWrite: false })));
+
+    const vers = (a, b, t) => a.clone().lerp(b, t).normalize();
+    const bord = (ile, autre, dedans) => vers(ile.d, autre.d, (ile.rad + dedans) / (ile.d.angleTo(autre.d) * R));
+    const nuagesPos = []; let nLong = 0;
+    const terreMat = allumable(new THREE.MeshLambertMaterial({ color: L.palette ? L.palette.terre : 0xb08060 }), U);
+    const herbeMat = allumable(new THREE.MeshLambertMaterial({ color: L.palette ? L.palette.sol.haut : 0x9af2cc }), U);
+    const socle = new THREE.CylinderGeometry(1.9, 1.3, 0.75, 20), dessus = new THREE.CylinderGeometry(1.95, 1.95, 0.18, 20);
+    archi.liens.forEach((l, i) => {
+      const { a, b } = l;
+      if (l.secret) {                                          // courant d'air qui monte jusqu'à l'île secrète
+        const d = vers(bord(a, b, 0), bord(b, a, 0), 0.5);
+        const n = 60, pos = new Float32Array(n * 3), g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+        const pts = new THREE.Points(g, new THREE.PointsMaterial({ size: 0.35, map: glow, color: 0xbfe8ff, transparent: true, opacity: 0.8, depthWrite: false, blending: THREE.AdditiveBlending }));
+        pts.frustumCulled = false; planet.group.add(pts);
+        planet.courants.push({ dir: d, rayon: 1.6, haut: R + b.h + 3 - planet.surface(d), g, pos, n, ph: ra() * 6 });
+        return;
+      }
+      if (!l.long) return;                                     // petit trou : un double saut suffit
+      const haut = R + Math.min(a.h, b.h);
+      if (nLong++ % 2 === 1) {                                 // deux nuages-ressorts au-dessus du vide
+        for (const t of [0.33, 0.67]) nuagesPos.push({ d: vers(bord(a, b, 0), bord(b, a, 0), t), abs: haut - 1.2 });
+        return;
+      }
+      const g = new THREE.Group();                             // plateforme qui fait la navette
+      const s1 = new THREE.Mesh(socle, terreMat), s2 = new THREE.Mesh(dessus, herbeMat);
+      s1.position.y = -0.375; s2.position.y = 0.0; g.add(s1, s2); planet.group.add(g);
+      const o = { dir: bord(a, b, 2).clone(), radius: 1.9, bas: 0, haut: 0, mobile: true, deplacement: new THREE.Vector3() };
+      planet.solides.push(o);
+      planet.mobiles.push({ o, g, a: bord(a, b, 2), b: bord(b, a, 2), abs: haut, t: ra() * 6, v: 4.5 / Math.max(3, l.gap - 4) });
+    });
+    if (nuagesPos.length) {
+      const boule = new THREE.SphereGeometry(1, 14, 10), mats = [];
+      for (const { d, abs } of nuagesPos) {
+        const t1 = new THREE.Vector3().crossVectors(d, Math.abs(d.y) < 0.9 ? Y : new THREE.Vector3(1, 0, 0)).normalize(), t2 = new THREE.Vector3().crossVectors(d, t1);
+        for (let j = 0; j < 4; j++) {
+          const an = j * 1.57, rr = j === 0 ? 0 : 0.9, p = center.clone().addScaledVector(d, abs).addScaledVector(t1, Math.cos(an) * rr).addScaledVector(t2, Math.sin(an) * rr);
+          const s = j === 0 ? 1.3 : 0.9;
+          mats.push(new THREE.Matrix4().compose(p, new THREE.Quaternion().setFromUnitVectors(Y, d), new THREE.Vector3(s * 1.2, s * 0.5, s * 1.2)));
+        }
+        const sol = planet.surface(d);
+        planet.solides.push({ dir: d.clone(), radius: 1.8, bas: abs - sol - 0.4, haut: abs - sol + 0.35, rebond: true, ressort: true });
+      }
+      const mi = new THREE.InstancedMesh(boule, allumable(new THREE.MeshStandardMaterial({ color: 0xfff6ff, emissive: 0xffc6ef, emissiveIntensity: 0.3, roughness: 0.9 }), U), mats.length);
+      mats.forEach((m, i) => mi.setMatrixAt(i, m)); mi.instanceMatrix.needsUpdate = true; mi.computeBoundingSphere();
+      planet.group.add(mi);
+    }
+  }
   planet.mer = L.mer || 0; planet.gravite = L.gravite || 1;
-  let coins = avec3D ? amenager({ L, r, k, center, U, group: planet.group, surfacePoint: planet.surfacePoint, freeDir, marquer, allumable, solides: planet.solides }) : [];
+  const densite = archi ? THREE.MathUtils.clamp(archi.iles.reduce((t, o) => t + o.rad * o.rad, 0) / (4 * L.radius * L.radius) * 2.5, 0.15, 1) : 1;
+  let coins = avec3D ? amenager({ densite, L, r, k, center, U, group: planet.group, surfacePoint: planet.surfacePoint, freeDir, marquer, allumable, solides: planet.solides }) : [];
+  coins = coins.filter(c => planet.terre(c.dir));            // archipel : pas de cachette au-dessus du vide
   for (let i = coins.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [coins[i], coins[j]] = [coins[j], coins[i]]; }
   const nbCoinsBraises = Math.ceil(L.embers * 0.6), coinsRestants = coins.slice(nbCoinsBraises);
   coins = coins.slice(0, nbCoinsBraises);
@@ -440,12 +558,12 @@ export function createPlanet(scene, glow, modeles, L, allume = false, ramasses =
 
   // ---- trésors et habitants : dans les coins restants, en hauteur, et cachés derrière les rochers et les arbres ----
   const cachette = () => {
-    const s = planet.solides.filter(x => x.bas === 0 && x.haut > 0.8 && x.haut < 9);
+    const s = planet.solides.filter(x => x.bas === 0 && x.haut > 0.8 && x.haut < 9 && planet.terre(x.dir));
     for (let n = 0; n < 40 && s.length; n++) {
       const o = s[Math.floor(r() * s.length)];
       if (r() < 0.3 && o.haut < 4.5 && o.radius > 0.6) return { dir: o.dir.clone(), h: o.haut + 0.9 };     // perché dessus
       const d = o.dir.clone().addScaledVector(randomDir(r).cross(o.dir).normalize(), (o.radius + 1) / L.radius).normalize();
-      if (!planet.solides.some(x => x.bas === 0 && x !== o && x.dir.angleTo(d) * L.radius < x.radius + 0.6)) return { dir: d, h: 0.9 };
+      if (planet.terre(d) && !planet.solides.some(x => x.bas === 0 && x !== o && x.dir.angleTo(d) * L.radius < x.radius + 0.6)) return { dir: d, h: 0.9 };
     }
     return { dir: freeDir(0.4), h: 0.9 };
   };
@@ -510,7 +628,7 @@ export function createPlanet(scene, glow, modeles, L, allume = false, ramasses =
       const nb = 6 + Math.floor(r() * 4), pas = 1.9 / L.radius;
       for (let j = 0; j < nb; j++) {
         const d = a.clone().applyAxisAngle(axe, j * pas);
-        if (d.angleTo(Y) < 3 / L.radius || d.angleTo(bDir) < 2 / L.radius) continue;
+        if (d.angleTo(Y) < 3 / L.radius || d.angleTo(bDir) < 2 / L.radius || !planet.terre(d)) continue;
         let h = 0.9;                                                         // au-dessus d'un rocher ? on passe par-dessus
         for (const s of planet.solides) {
           if (s.bas > 0.5 || s.haut > 4) continue;
@@ -590,6 +708,13 @@ export function animatePlanet(p, dt, clock) {
   }
   if (p.eau) p.eau.rotation.y += dt * 0.02;
   if (p.U.uTemps) p.U.uTemps.value = clock;
+  for (const m of p.mobiles || []) {                         // plateformes qui font la navette (elles emportent Fanal)
+    m.t += dt * m.v;
+    const d = m.a.clone().lerp(m.b, 0.5 - 0.5 * Math.cos(m.t)).normalize(), avant = m.g.position.clone();
+    m.o.dir.copy(d); m.o.haut = m.abs - p.surface(d); m.o.bas = m.o.haut - 0.75;
+    m.g.position.copy(p.center).addScaledVector(d, m.abs); m.g.quaternion.setFromUnitVectors(Y, d);
+    if (avant.lengthSq() > 0) m.o.deplacement.copy(m.g.position).sub(avant);
+  }
   animerParcours(p, dt, clock);
   // ressources : elles tournent et flottent ; celles qu'on a prises disparaissent
   const res = p.ressources;

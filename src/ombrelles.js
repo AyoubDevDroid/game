@@ -225,7 +225,7 @@ export function createOmbrelles(scene, modeles = {}) {
   function peupler(P) {
     vider();
     const r = rng(P.seed * 7 + 5), roster = ROSTER[P.biome] || ROSTER.menthe;
-    const loin = d => d.angleTo(Y) > 0.3 + 8 / P.radius && d.angleTo(P.beacon.dir) > 0.4;
+    const loin = d => d.angleTo(Y) > 0.3 + 8 / P.radius && d.angleTo(P.beacon.dir) > 0.4 && (!P.terre || P.terre(d));
     for (let i = 0; i < P.ombrelles; i++) {
       let dir = randomDir(r);
       for (let k = 0; k < 200 && !loin(dir); k++) dir = randomDir(r);
@@ -288,7 +288,9 @@ export function createOmbrelles(scene, modeles = {}) {
   // avance sur la sphère dans la direction du cap (le feu-follet et la méduse passent au-dessus de tout)
   const ecart = new THREE.Vector3();
   function avancer(o, vitesse, dt) {
+    const avant = o.dir.clone();
     o.dir.addScaledVector(o.cap, vitesse * dt / o.P.radius).normalize();
+    if (o.P.terre && !o.P.terre(o.dir) && o.type !== 'follet' && o.type !== 'meduse') { o.dir.copy(avant); o.cap.negate(); return true; }   // bord de l'île : demi-tour
     if (o.type === 'follet' || o.type === 'meduse') return false;
     const R = o.P.radius, moi = 0.45 * o.taille * (o.grossit || 1);
     let cogne = false;

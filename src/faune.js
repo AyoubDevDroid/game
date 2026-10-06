@@ -78,7 +78,9 @@ export function peuplerFaune(planet, allumable) {
   };
   const M = new THREE.Matrix4(), X = new THREE.Vector3(), tmp = new THREE.Vector3(), ecart = new THREE.Vector3();
   const avancer = (a, v, dt) => {
+    const avant = a.dir.clone();
     a.dir.addScaledVector(a.cap, v * dt / L.radius).normalize();
+    if (planet.terre && !planet.terre(a.dir) && a.caractere !== 'volant') { a.dir.copy(avant); a.cap.negate(); }
     if (a.vol) return;
     for (const s of planet.solides || []) {                          // les bêtes contournent les rochers et les troncs
       if (s.bas > 1 || s.haut < 0.5) continue;

@@ -119,7 +119,13 @@ export function tracerChemin(ctx) {
   const angle = depart.angleTo(arrivee), pas = 0.9 / R, n = Math.max(8, Math.floor(angle / pas));
   const ondulation = 2.5 + r() * 1.5, tours = 2 + Math.floor(r() * 2);
   const points = [];
-  for (let i = 0; i <= n; i++) {
+  if (ctx.etapes) {                                                         // archipel : le chemin passe d'île en île
+    for (let e = 0; e < ctx.etapes.length - 1; e++) {
+      const a = ctx.etapes[e], b = ctx.etapes[e + 1], m = Math.max(2, Math.ceil(a.angleTo(b) / pas));
+      for (let i = 0; i < m; i++) points.push(a.clone().lerp(b, i / m).normalize());
+    }
+    points.push(ctx.etapes[ctx.etapes.length - 1].clone());
+  } else for (let i = 0; i <= n; i++) {
     const t = i / n, d = depart.clone().applyAxisAngle(axe, angle * t);
     const cote = new THREE.Vector3().crossVectors(d, axe).normalize();      // de côté : le chemin serpente
     d.addScaledVector(cote, Math.sin(t * Math.PI * tours) * Math.sin(t * Math.PI) * ondulation / R).normalize();
@@ -137,7 +143,7 @@ export function tracerChemin(ctx) {
       const dd = d.clone().addScaledVector(cote, o / R).normalize(), p = surfacePoint(dd).addScaledVector(dd, 0.07);
       pos.push(p.x, p.y, p.z); col.push(c.r, c.g, c.b);
     }
-    if (i > 0) for (let j = 0; j < 4; j++) { const a = (i - 1) * 5 + j, b = i * 5 + j; idx.push(a, b, a + 1, a + 1, b, b + 1); }
+    if (i > 0 && (!ctx.terre || (ctx.terre(points[i]) && ctx.terre(points[i - 1])))) for (let j = 0; j < 4; j++) { const a = (i - 1) * 5 + j, b = i * 5 + j; idx.push(a, b, a + 1, a + 1, b, b + 1); }
   }
   const geo = new THREE.BufferGeometry();
   geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); geo.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
@@ -150,13 +156,21 @@ export function tracerChemin(ctx) {
   for (let i = 0; i < nbC; i++) {
     const j = Math.floor(r() * (points.length - 1)), d = points[j], tan = points[j + 1].clone().sub(d).normalize();
     const cote = new THREE.Vector3().crossVectors(d, tan).normalize(), dd = d.clone().addScaledVector(cote, (r() < 0.5 ? -1 : 1) * 1.25 / R).normalize();
-    Q.setFromUnitVectors(Y, dd); const s = 0.6 + r() * 0.9;
+    const vide = ctx.terre && !ctx.terre(dd);                               // pas de caillou au-dessus du vide
+    Q.setFromUnitVectors(Y, dd); const s = vide ? 0 : 0.6 + r() * 0.9;
     cailloux.setMatrixAt(i, M.compose(surfacePoint(dd), Q, S.set(s, s * 0.6, s)));
   }
   group.add(cailloux);
   // trois lanternes-relais le long du chemin
   const lesRelais = [0.3, 0.58, 0.84].map((t, n2) => {
-    const d = points[Math.floor(t * (points.length - 1))], tan = points[Math.floor(t * (points.length - 1)) + 1].clone().sub(d).normalize();
+    let j = Math.floor(t * (points.length - 1));
+    if (ctx.terre) for (let e = 0; e < points.length * 2; e++) {           // archipel : la lanterne se pose sur une île, jamais au-dessus du vide
+      const jj = j + (e % 2 ? -1 : 1) * Math.ceil(e / 2);
+      if (jj < 0 || jj >= points.length - 1 || !ctx.terre(points[jj])) continue;
+      const t2 = points[jj + 1].clone().sub(points[jj]).normalize(), c2 = new THREE.Vector3().crossVectors(points[jj], t2).normalize();
+      if (ctx.terre(points[jj].clone().addScaledVector(c2, 1.7 / R).normalize())) { j = jj; break; }
+    }
+    const d = points[j], tan = points[j + 1].clone().sub(d).normalize();
     const cote = new THREE.Vector3().crossVectors(d, tan).normalize(), dd = d.clone().addScaledVector(cote, 1.7 / R).normalize();
     const rl = relais(glow); ctx.placeOn(rl.g, dd); group.add(rl.g);
     obstacles.push({ dir: dd, radius: 0.35, height: 1.9 });

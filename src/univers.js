@@ -138,6 +138,7 @@ export function planete(g, i) {
   const seed = 1000 + g * 37 + i * 11, r = rng(seed);
   const boss = i === NB_PLANETES - 1;
   const biome = BIOMES[ordreBiomes(g)[i % BIOMES.length]];
+  const archipel = !boss && !biome.mer && !biome.nuages && i % 5 === 3;   // îles sur une mer de nuages
   const hu = HUMEURS[g === 0 && i === 0 ? 2 : Math.floor(r() * HUMEURS.length)];
   // teinte principale : celle du biome, décalée librement (une planète de lave peut être rose ou violette)
   const H = teinteDe(biome.sol.base) + (g === 0 && i < 2 ? 0 : (r() - 0.5) * 0.36);
@@ -156,7 +157,7 @@ export function planete(g, i) {
   return {
     g, i, seed, nom, boss, radius, biome: biome.nom,
     sol, motif: biome.motif, motifCol: pal.motif, scale: biome.scale, herbe: pal.herbe, decors: biome.decors,
-    palette: pal, humeur: hu, forme: biome.mer || biome.nuages ? 'doux' : forme, signature: biome.nuages && signature === 'canyon' ? 'jardin' : signature, ressource,
+    palette: pal, humeur: hu, forme: biome.mer || biome.nuages || archipel ? 'doux' : forme, archipel, signature: biome.nuages && signature === 'canyon' ? 'jardin' : signature, ressource,
     mer: biome.mer ? 0.35 : 0,                             // niveau de la mer au-dessus du rayon (planète océan)
     nuages: !!biome.nuages, gravite: biome.nuages ? 0.72 : 1,
     beacon, relief: biome.mer ? 1.25 : biome.nuages ? 0.35 : 0.5 + r() * 0.5, freq: 1 + r() * 0.6, bosse: { h: 1.2 + r() * 1.2, w: 0.25 + r() * 0.12 },
