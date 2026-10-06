@@ -17,6 +17,7 @@ import { allumable } from './lumiere.js';
 import { createDialogue } from './dialogue.js';
 import { INTRO, ASTUCES, MERCIS, MEMOIRES } from './histoire.js';
 import { installerMission, updateMission } from './missions.js';
+import { installerPieces } from './pieces.js';
 import { GALAXIES, NB_GALAXIES, NB_PLANETES, planete, lireSauvegarde, nouvellePartie, sauver, cle, phareAllume } from './univers.js';
 
 // ---------- réglages du gameplay ----------
@@ -146,13 +147,14 @@ function hud() {
   $('planete').textContent = planet.nom;
   $('planeteNum').textContent = `Galaxie ${S.g + 1} · Planète ${S.i + 1} / ${NB_PLANETES}`;
   const got = planet.embers.filter(e => e.taken).length;
-  $('braises').textContent = planet.lit ? '✓ phare rallumé' : `${got} / ${planet.embers.length}`;
+  $('braises').textContent = planet.lit ? '✓' : `${got} / ${planet.embers.length}`;
   const res = planet.ressources;
   $('pillRessource').hidden = !(res && res.items.length);
   if (res && res.items.length) {
     $('ressourceIcone').textContent = planet.ressource.icone;
     $('ressource').textContent = `${res.items.filter(x => x.pris).length} / ${res.items.length}`;
   }
+  $('pieces').textContent = S.nbPieces || 0;
   $('pillVies').textContent = '❤️'.repeat(Math.max(0, S.vies)) + '🤍'.repeat(3 - Math.max(0, S.vies));
   const pc = planet.parcours;
   $('pillHabitants').hidden = !(pc && pc.habitants.length);
@@ -228,6 +230,7 @@ function charger(g, i, arrivee = false) {
   if (!allume) ombrelles.peupler(planet);
   gardien = !allume && L.gardien ? createGardien(glow, planet, L.gardien) : null;
   faune = peuplerFaune(planet, allumable);
+  S.pieces = installerPieces(planet); S.nbPieces = 0;
   S.mission = save ? installerMission(planet, glow, save, cle(g, i)) : null;
   afficherPouvoirs();
   // la Luciole est garée en haut de la planète
@@ -440,6 +443,11 @@ function updatePlayer(dt) {
       S.pos.addScaledVector(o.dir, o.haut - h);                // posé sur le dessus
       if (o.rebond) { S.surNuage = true; astuce('nuages'); }
       if (o.mobile) S.support = o;
+      if (o.caisse && vrO < -3) {                              // on saute sur une caisse : elle casse, on rebondit
+        casserCaisses(P.center.clone().addScaledVector(o.dir, P.surface(o.dir) + 0.45), 0.2);
+        S.vel.addScaledVector(o.dir, -vrO + JUMP * 0.75); S.onGround = false; S.airJumps = 1;
+        continue;
+      }
       if (o.ressort && vrO < -1) {                             // nuage-ressort : il renvoie toujours bien haut
         S.vel.addScaledVector(o.dir, -vrO + 15); S.onGround = false; S.airJumps = 1; sfx.jump2(); fanal.spin(); burst(S.pos, 16, 0xffd6f6, 4, o.dir);
         continue;
@@ -535,6 +543,22 @@ function updateGame(dt) {
   S.serieT = Math.max(0, (S.serieT || 0) - dt);
   if (S.aSauver && S.serieT <= 0) { S.aSauver = false; sauver(save); }
 
+  // pièces d'étincelle : toutes les 50, une flamme de vie revient
+  if (S.pieces) {
+    const n = S.pieces.update(dt, S.time, chest);
+    if (n) {
+      S.nbPieces += n; save.pieces = (save.pieces || 0) + n; S.aSauver = true;
+      S.seriePieces = S.seriePieceT > 0 ? Math.min(12, (S.seriePieces || 0) + 1) : 0; S.seriePieceT = 0.6;
+      sfx.piece(S.seriePieces); burst(chest, 6, 0xffd23f, 2.5);
+      if (Math.floor(S.nbPieces / 50) > Math.floor((S.nbPieces - n) / 50)) {
+        if (S.vies < 3) { S.vies++; message('✨ 50 pièces !', 'Une flamme de vie revient ❤️', 1800); } else message('✨ 50 pièces !', 'Continue comme ça !', 1500);
+        sfx.ready(); burst(chest, 40, 0xffd23f, 6);
+      }
+      hud();
+    }
+    S.seriePieceT = Math.max(0, (S.seriePieceT || 0) - dt);
+  }
+
   // rallumer le phare
   if (P.beacon.ready && !P.lit && chest.distanceTo(P.beacon.pos) < P.beacon.portee + (P.boss ? 1.5 : 0)) {
     setTimeout(() => { astuce('allume'); verifierPouvoirs(); }, 3000);
@@ -570,7 +594,7 @@ function updateGame(dt) {
 // ---------- le parcours : relais, coffres, flammèches, habitants ----------
 // plus de vie : Fanal se rallume à la dernière lanterne-relais (ou près de la Luciole)
 function chute() {
-  sfx.touche(); vibre('fort'); fanal.setMood('peur', 1.2); burst(S.pos, 30, 0xffffff, 4);
+  secouer(0.35); sfx.touche(); vibre('fort'); fanal.setMood('peur', 1.2); burst(S.pos, 30, 0xffffff, 4);
   const d = (S.sur || new THREE.Vector3(0, 1, 0)).clone();
   S.up.copy(d); S.pos.copy(planet.surfacePoint(d)).addScaledVector(d, 0.6); S.vel.set(0, 0, 0); S.onGround = false; S.invuln = 1.2;
   updateCamera(0, true);
@@ -650,6 +674,18 @@ const braiseMat = new THREE.MeshBasicMaterial({ color: 0xffc56b });
 const braiseGeo = new THREE.OctahedronGeometry(0.22);
 const eclairMat = new THREE.LineBasicMaterial({ color: 0x9ff6ff, transparent: true, opacity: 1, blending: THREE.AdditiveBlending, depthWrite: false });
 const eclairs = [];
+// caisses : elles éclatent en pièces (et parfois une flamme de vie)
+function casserCaisses(centre, rayon) {
+  const cs = S.pieces ? S.pieces.casser(centre, rayon) : [];
+  for (const c of cs) {
+    burst(c.pos, 26, 0xd99a52, 5); burst(c.pos, 14, 0xffe066, 4, c.d); onde(c.pos, c.d, 0xffd23f);
+    sfx.coffre(); vibre('moyen'); secouer(0.22); geler(0.05);
+    if (c.flamme) { S.vies = Math.min(3, S.vies + 1); burst(c.pos, 20, 0xff5fa2, 4, c.d); message('❤️', 'Une flamme de vie cachée dans la caisse !', 1400); hud(); }
+  }
+  return cs.length;
+}
+function secouer(f) { S.secousse = Math.max(S.secousse || 0, f); }
+function geler(t) { S.gel = Math.max(S.gel || 0, t); }
 function updatePouvoirs(dt) {
   const evts = [], p = (save && save.pouvoirs) || {};
   S.rechTir = Math.max(0, (S.rechTir || 0) - dt); S.rechEclair = Math.max(0, (S.rechEclair || 0) - dt);
@@ -669,6 +705,7 @@ function updatePouvoirs(dt) {
     b.m.position.copy(planet.surfacePoint(b.n)).addScaledVector(b.n, 0.9); b.m.rotation.y += dt * 12;
     if (Math.random() < 0.6) burst(b.m.position, 1, 0xff8a3d, 0.8);
     const touche = ombrelles.frapper(b.m.position, 0.6);
+    if (casserCaisses(b.m.position, 0.5)) touche.push({ type: 'caisse' });
     const coffre = planet.parcours && planet.parcours.coffres.find(c => !c.ouvert && c.pos.distanceTo(b.m.position) < 1.2);
     if (coffre) ouvrirCoffre(coffre);
     const mur = planet.solides.some(s => s.bas < 0.5 && s.haut > 0.8 && s.dir.angleTo(b.n) * planet.radius < s.radius);
@@ -681,6 +718,7 @@ function updatePouvoirs(dt) {
     S.rechEclair = 3.5;
     const centre = S.pos.clone().addScaledVector(S.up, 0.8);
     evts.push(...ombrelles.frapper(centre, 4.5, { electrique: true }));
+    casserCaisses(centre, 4.5);
     onde(centre, S.up, 0x7cf0ff); onde(S.pos.clone().addScaledVector(S.up, 0.2), S.up, 0x9ff6ff); burst(centre, 50, 0x9ff6ff, 8);
     sfx.onde(); vibre('fort'); fanal.setMood('super', 0.8);
     for (let k = 0; k < 7; k++) {                                     // arcs électriques en zigzag
@@ -759,6 +797,7 @@ function updateOmbrelles(dt) {
     onde(centre, S.up, 0xff8a3d); burst(centre, 26, 0xff8a3d, 6);
     evts.push(...ombrelles.frapper(centre, 2.1));
     for (const c of planet.parcours ? planet.parcours.coffres : []) if (!c.ouvert && c.pos.distanceTo(centre) < 2.4) ouvrirCoffre(c);
+    casserCaisses(centre, 2.0);
   }
   evts.push(...updatePouvoirs(dt));
   for (const ev of evts) {
@@ -777,13 +816,15 @@ function updateOmbrelles(dt) {
     if (ev.type === 'balaye') burst(ev.pos, 20, 0xffd27a, 3);
     if (ev.type === 'tir') sfx.tir();
     if (ev.type === 'onde') sfx.onde();
-    if (ev.type === 'eclat_ombre') { burst(ev.pos, 22, 0x8a4fff, 4); onde(ev.pos, planet.surfacePoint(ev.pos.clone().normalize()).normalize(), 0x8a4fff); }
+    if (ev.type === 'eclat_ombre') { secouer(0.15); geler(0.04); if (S.pieces) S.pieces.jaillir(ev.pos.clone(), 3); burst(ev.pos, 22, 0x8a4fff, 4); onde(ev.pos, planet.surfacePoint(ev.pos.clone().normalize()).normalize(), 0x8a4fff); }
     if (ev.type === 'eclat_neige') { burst(ev.pos, 40, 0xffffff, 6); sfx.ecrase(); }
     if (ev.type === 'pique') { burst(ev.pos, 14, 0xffb000, 4); sfx.pique(); message('Aïe, des piquants !', 'Attends qu\'ils rentrent', 1300); }
     if (ev.type === 'ecrase') {
       rebond(); sfx.ecrase(); vibre('moyen'); fanal.setMood('ravi', 0.8); burst(ev.pos, 30, 0xb48cff, 5);
+      secouer(0.18); geler(0.06); if (S.pieces) S.pieces.jaillir(ev.pos.clone(), 3);
     }
     if (ev.type === 'boss_touche') {
+      secouer(0.45); geler(0.09);
       rebond(); sfx.ecrase(); vibre('fort'); fanal.setMood('ravi', 0.8); burst(ev.pos, 50, 0xffc23d, 7);
       message('Touché !', `Encore ${ev.o.vie} ${ev.o.vie > 1 ? 'coups' : 'coup'}`, 1400); hud();
     }
@@ -793,6 +834,7 @@ function updateOmbrelles(dt) {
       setTimeout(() => { hud(); verifierPhare(); }, 50);
     }
     if (ev.type === 'touche' && S.invuln <= 0) {
+      secouer(0.4);
       S.invuln = 1.6;
       const recul = projectOnPlane(S.pos.clone().sub(ev.pos), S.up);
       if (recul.lengthSq() < 1e-4) recul.copy(S.face).negate();
@@ -817,6 +859,11 @@ function updateCamera(dt, instant = false) {
   camera.position.lerp(desired, k);
   camera.up.lerp(S.up, k).normalize();
   camera.lookAt(S.pos.clone().addScaledVector(S.up, 1.3));
+  // tremblement (coups, caisses, chutes) : un petit décalage qui s'éteint vite
+  if (S.secousse > 0.002) {
+    S.secousse *= Math.exp(-9 * dt);
+    camera.position.add(new THREE.Vector3().randomDirection().multiplyScalar(S.secousse * 0.6));
+  }
 }
 
 function placeFanal(dt) {
@@ -848,7 +895,8 @@ function frame(now) {
   requestAnimationFrame(frame);
   if (enPause) return;
   const raw = (now - last) / 1000; last = now; qualite(raw);
-  const dt = Math.min(1 / 30, raw);
+  let dt = Math.min(1 / 30, raw);
+  if (S.gel > 0) { S.gel -= raw; dt = 0.0001; }                 // arrêt sur image après un gros coup
   clock += dt;
   const enJeu = S.state === 'jeu' && !dialogue.ouvert && !S.journal;          // pendant un dialogue ou le journal, le jeu attend
   dialogue.update(dt);

@@ -520,6 +520,7 @@ export function createPlanet(scene, glow, modeles, L, allume = false, ramasses =
   planet.coinsNuages = coinsNuages;
   // ---- archipel : mer de nuages, plateformes mobiles, nuages-ressorts et courants d'air entre les îles ----
   planet.mobiles = [];
+  planet.liens = archi ? archi.liens : [];
   if (archi) {
     const R = L.radius, ra = archi.ra;
     const merNuages = L.plat ? R - 22 : R - 1.6;
