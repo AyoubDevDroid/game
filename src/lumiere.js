@@ -10,6 +10,9 @@ uniform float uWave, uScale, uTexScale;
 #if TEX
 uniform sampler2D uTex;
 #endif
+#if ROCHE
+uniform sampler2D uRoche;
+#endif
 float h3(vec3 p){ p = fract(p * 0.3183099 + 0.1); p *= 17.0; return fract(p.x * p.y * p.z * (p.x + p.y + p.z)); }
 float vn(vec3 x){
   vec3 i = floor(x), f = fract(x); f = f * f * (3.0 - 2.0 * f);
@@ -32,9 +35,19 @@ const FRAG = /* glsl */`
   vec3 dir = normalize(vWP - uCenter);
   float ang = acos(clamp(dot(dir, uBeacon), -1.0, 1.0));
   float lit = 1.0 - smoothstep(uWave - 0.35, uWave, ang);
-#if TEX                                                // texture de sol : projetée sur les 3 axes (pas de raccord sur la sphère)
-  vec3 pp = (vWP - uCenter) * uTexScale, w = pow(abs(dir), vec3(4.0)); w /= w.x + w.y + w.z;
-  vec3 tc = texture2D(uTex, pp.yz).rgb * w.x + texture2D(uTex, pp.xz).rgb * w.y + texture2D(uTex, pp.xy).rgb * w.z;
+#if TEX                                                // texture de sol, projetée selon la pente (aucun raccord, aucune déformation)
+  vec3 nW = normalize((vec4(normal, 0.0) * viewMatrix).xyz);
+  vec3 w = pow(abs(nW), vec3(4.0)); w /= w.x + w.y + w.z;
+  vec3 pp = (vWP - uCenter) * uTexScale;
+  vec3 tc = texture2D(uTex, pp.zy).rgb * w.x + texture2D(uTex, pp.xz).rgb * w.y + texture2D(uTex, pp.xy).rgb * w.z;
+#if ROCHE                                              // falaises et pentes raides : la roche
+  float kr = 1.0 - smoothstep(0.5, 0.78, dot(nW, dir));
+  if (kr > 0.01) {
+    vec3 pr = pp * 1.25;
+    vec3 rc = texture2D(uRoche, pr.zy).rgb * w.x + texture2D(uRoche, pr.xz).rgb * w.y + texture2D(uRoche, pr.xy).rgb * w.z;
+    tc = mix(tc, rc, kr);
+  }
+#endif
   float vl = dot(diffuseColor.rgb, vec3(0.299, 0.587, 0.114));
   diffuseColor.rgb = tc * mix(1.0, vl / 0.55, 0.3);      // les creux restent un peu plus sombres que les bosses
 #endif
@@ -61,9 +74,9 @@ export function uniformsPlanete(center, beaconDir) {
 export function regleVague(U, t) { U.uWave.value = -0.5 + t * (Math.PI + 1.0); }
 
 // motif : 0 aucun, 2 lave, 3 étoiles (l'herbe est peinte dans les couleurs du sol)
-export function allumable(mat, U, { motif = 0, motifCol = 0xffffff, scale = 6, tex = null, texScale = 0.18 } = {}) {
-  mat.defines = { ...(mat.defines || {}), MOTIF: motif, TEX: tex ? 1 : 0 };   // un programme par motif : on ne calcule que le nécessaire
-  const extra = { uMotifCol: { value: new THREE.Color(motifCol) }, uScale: { value: scale }, uTexScale: { value: texScale }, ...(tex ? { uTex: { value: tex } } : {}) };
+export function allumable(mat, U, { motif = 0, motifCol = 0xffffff, scale = 6, tex = null, roche = null, texScale = 0.12 } = {}) {
+  mat.defines = { ...(mat.defines || {}), MOTIF: motif, TEX: tex ? 1 : 0, ROCHE: tex && roche ? 1 : 0 };   // un programme par motif : on ne calcule que le nécessaire
+  const extra = { uMotifCol: { value: new THREE.Color(motifCol) }, uScale: { value: scale }, uTexScale: { value: texScale }, ...(tex ? { uTex: { value: tex } } : {}), ...(roche ? { uRoche: { value: roche } } : {}) };
   mat.onBeforeCompile = sh => {
     Object.assign(sh.uniforms, U, extra);
     sh.vertexShader = sh.vertexShader

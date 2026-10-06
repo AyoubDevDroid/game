@@ -6,6 +6,7 @@ import { mergeGeometries, mergeVertices } from 'three/examples/jsm/utils/BufferG
 import { allumable, uniformsPlanete, regleVague } from './lumiere.js';
 import { DECORS, MATIERES } from './decor.js';
 import { morceaux, TEXTURES } from './modeles.js';
+import { peindreSol, peindreRoche } from './peinture.js';
 import { rng } from './univers.js';
 import { amenager, decorsPrets } from './amenagement.js';
 import { tracerChemin, placerTresors, animerParcours } from './parcours.js';
@@ -356,7 +357,7 @@ export function createPlanet(scene, glow, modeles, L, allume = false, ramasses =
   geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
   geo.computeVertexNormals();
   }
-  const groundMat = allumable(new THREE.MeshLambertMaterial({ vertexColors: true, emissive: 0x000000, side: L.plat ? THREE.DoubleSide : THREE.FrontSide }), U, { motif: L.motif, motifCol: L.motifCol, scale: (L.scale || 6) / k, tex: TEXTURES['sol-' + L.biome.normalize('NFD').replace(/[̀-ͯ]/g, '')] || TEXTURES['sol-tous'] });
+  const groundMat = allumable(new THREE.MeshLambertMaterial({ vertexColors: true, emissive: 0x000000, side: L.plat ? THREE.DoubleSide : THREE.FrontSide }), U, { motif: L.motif, motifCol: L.motifCol, scale: (L.scale || 6) / k, tex: TEXTURES['sol-' + L.biome.normalize('NFD').replace(/[̀-ͯ]/g, '')] || TEXTURES['sol-tous'] || peindreSol(L), roche: TEXTURES['roche-tous'] || peindreRoche(L) });
   planet.group.add(new THREE.Mesh(geo, groundMat));
 
 
