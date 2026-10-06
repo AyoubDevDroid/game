@@ -1,1 +1,18 @@
-Dépose ici les modèles .glb (voir README).
+Déposez ici vos modèles 3D (.glb, textures incluses). Ils remplacent automatiquement les formes du jeu.
+
+PERSONNAGES ET ENNEMIS (nom exact du fichier) :
+  fanal.glb  vaisseau.glb  ombrelle.glb  ombrelle-sauteuse.glb  crabe.glb  follet.glb  gelee.glb
+  herisson.glb  tireuse.glb  givron.glb  meduse.glb  boss-ombrelle.glb
+  (Fanal peut être riggé et animé : animations idle / walk / run / jump)
+
+DÉCORS : decor-<monde>-<rôle>[-numéro].glb
+  monde : menthe, lave, etoilee, givre, verdoyance, dunes, corail, marais, lagon, volcan,
+          hantee, pirate, royaume, gourmande, fetes, bourg, ou « tous » (tous les mondes)
+  rôle et hauteur dans le jeu (Fanal mesure 1,75) :
+    arbre 5 · champi 2,2 · petit 0,6 (fleurs, herbes) · rocher 1,5 · deco 1,3 · cachette 2,2
+    escalier-bas 1 · escalier-moyen 1,9 · escalier-haut 3,2 (les 3 marches à escalader)
+    ilot 0,8 (plateforme flottante)
+  Exemples : decor-menthe-arbre-1.glb, decor-menthe-arbre-2.glb, decor-tous-rocher.glb
+  La taille est ajustée toute seule ; le modèle doit être debout, pieds au sol.
+
+Ensuite : npm run dev (ou npm run apk) pour voir le résultat.

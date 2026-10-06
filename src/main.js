@@ -11,7 +11,7 @@ import { createOmbrelles } from './ombrelles.js';
 import { createGardien } from './gardien.js';
 import { createVaisseau } from './vaisseau.js';
 import { createCosmos } from './cosmos.js';
-import { chargerDecors } from './amenagement.js';
+import { chargerDecors, enregistrerDecors } from './amenagement.js';
 import { chargerFaune, peuplerFaune } from './faune.js';
 import { allumable } from './lumiere.js';
 import { GALAXIES, NB_GALAXIES, NB_PLANETES, planete, lireSauvegarde, nouvellePartie, sauver, cle, phareAllume } from './univers.js';
@@ -37,6 +37,7 @@ const glow = makeGlowTexture();
 const sky = createSky(scene, glow);
 const modeles = await chargerModeles();          // modèles .glb de public/modeles (s'il y en a)
 await Promise.all([chargerDecors(), chargerFaune()]);   // objets 3D et animaux des planètes (public/decors, packs CC0)
+enregistrerDecors(modeles);                      // vos décors (public/modeles/decor-<monde>-<rôle>.glb) remplacent ceux de Kenney
 const fanal = createFanal(glow, modeles);
 scene.add(fanal.object);
 const vaisseau = createVaisseau(glow, modeles);

@@ -198,9 +198,42 @@ function recolorer(m, L, T) {
 // ---------- aménagement d'une planète ----------
 // ctx : { L, r, k, center, U, group, surfacePoint, surface, freeDir, marquer, allumable, solides }
 // renvoie les « coins » où cacher des braises : [{ dir, h }]
+// ---------- vos décors à vous : public/modeles/decor-<monde>-<rôle>[-n].glb remplacent les objets Kenney ----------
+// rôle : arbre, champi, petit, rocher, escalier-bas, escalier-moyen, escalier-haut, ilot, cachette, deco
+// monde : menthe, lave, etoilee, givre, verdoyance, dunes, corail, marais, lagon, volcan, hantee, pirate,
+//         royaume, gourmande, fetes, bourg — ou « tous » pour tous les mondes
+// Les modèles sont mis à la hauteur du rôle (en unités du jeu ; Fanal mesure 1,75).
+const ROLES = {
+  arbre: ['arbres', 5, 'tronc'], champi: ['champis', 2.2, 'tronc'], petit: ['petits', 0.6, null], rocher: ['rochers', 1.5, 'plein'],
+  'escalier-bas': ['escalier', 1, 'plein', 0], 'escalier-moyen': ['escalier', 1.9, 'plein', 1], 'escalier-haut': ['escalier', 3.2, 'plein', 2],
+  ilot: ['ilot', 0.8, 'plein'], cachette: ['cachette', 2.2, null], deco: ['deco', 1.3, 'plein'],
+};
+const PERSO = {};                                          // monde → rôle du thème → [ids]
+export function enregistrerDecors(modeles) {
+  for (const [nom, scene] of Object.entries(modeles)) {
+    const m = /^decor-([a-z]+)-([a-z]+(?:-[a-z]+)?)(?:-\d+)?$/.exec(nom.normalize('NFD').replace(/[̀-ͯ]/g, ''));
+    if (!m || !ROLES[m[2]]) continue;
+    const [cleTheme, hauteur, collision, rang] = ROLES[m[2]], id = 'perso:' + nom;
+    scene.updateMatrixWorld(true);
+    const t = new THREE.Box3().setFromObject(scene).getSize(new THREE.Vector3());
+    MODELES[id] = preparer(scene, hauteur / Math.max(t.y, 1e-6));
+    CATALOGUE[id] = [1, collision];
+    const monde = (PERSO[m[1]] ||= {});
+    if (rang !== undefined) { (monde.escalier ||= []); monde.escalier[rang] = id; }
+    else (monde[cleTheme] ||= []).push(id);
+  }
+}
+const sansAccent = s => s.normalize('NFD').replace(/[̀-ͯ]/g, '');
+
 export function amenager(ctx) {
   const { L, r, k, group, surfacePoint, freeDir, marquer, allumable, U, solides } = ctx;
-  const T = THEMES[L.biome] || THEMES.menthe;
+  // le thème du monde, où vos décors remplacent ceux de Kenney rôle par rôle
+  const T = { ...(THEMES[L.biome] || THEMES.menthe) };
+  for (const source of [PERSO.tous, PERSO[sansAccent(L.biome)]]) if (source) for (const [role, ids] of Object.entries(source)) {
+    if (role === 'escalier') T.escalier = T.escalier.map((id, i) => ids[i] || id);
+    else if (role === 'ilot') T.ilot = ids[0];
+    else T[role] = ids;
+  }
   const Y = new THREE.Vector3(0, 1, 0);
   const lots = new Map();                                   // id → [Matrix4]
   const coins = [];
