@@ -33,27 +33,72 @@ const M = {
 };
 const OEIL_CALME = new THREE.Color(0xd9ccff), OEIL_CHASSE = new THREE.Color(0xff5fa2), OEIL_SONNE = new THREE.Color(0xffffff);
 
-function fabriquer(boss) {
+// toile d'ombrelle à rayures (8 pans de deux couleurs), un peu bombée
+function toile(c1, c2) {
+  const geo = new THREE.SphereGeometry(0.62, 32, 8, 0, Math.PI * 2, 0, Math.PI / 2.2);
+  const P = geo.attributes.position, col = new Float32Array(P.count * 3), a = new THREE.Color(c1), b = new THREE.Color(c2), v = new THREE.Vector3();
+  for (let i = 0; i < P.count; i++) {
+    v.fromBufferAttribute(P, i);
+    const ang = Math.atan2(v.z, v.x) + Math.PI, c = Math.floor(ang / (Math.PI / 4)) % 2 ? a : b;
+    col.set([c.r, c.g, c.b], i * 3);
+  }
+  geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+  return geo;
+}
+// trois sortes : la marcheuse (violette), la sauteuse (sarcelle, bondit vers Fanal), la Grande Ombrelle (boss)
+const STYLES = {
+  marcheuse: { toile: toile(0x7a3fd6, 0x2a1450), bord: 0xd9b8ff, corps: 0x2a1846, yeux: 0xfff3c4 },
+  sauteuse: { toile: toile(0x1fb5a8, 0x0d3b45), bord: 0x9ff6ff, corps: 0x10303a, yeux: 0xffe066 },
+  boss: { toile: toile(0xd8285f, 0x1a0510), bord: 0xffc23d, corps: 0x2a0a1e, yeux: 0xff5f5f },
+};
+const GX = {
+  sclere: new THREE.SphereGeometry(0.1, 12, 10), pupille: new THREE.SphereGeometry(0.05, 10, 8),
+  sourcil: new THREE.BoxGeometry(0.14, 0.03, 0.03), bouche: new THREE.SphereGeometry(0.07, 12, 8, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2),
+  dent: new THREE.ConeGeometry(0.018, 0.04, 4), pied: new THREE.SphereGeometry(0.1, 10, 8),
+  pompon: new THREE.SphereGeometry(0.055, 8, 6), crochet: new THREE.TorusGeometry(0.1, 0.028, 6, 16, Math.PI), manche: new THREE.CylinderGeometry(0.028, 0.028, 0.3, 6),
+};
+const MX = { blanc: new THREE.MeshBasicMaterial({ color: 0xffffff }), noir: new THREE.MeshBasicMaterial({ color: 0x14081f }) };
+
+function fabriquer(type) {
+  const st = STYLES[type], boss = type === 'boss';
+  const lambert = (c, e = 0) => new THREE.MeshLambertMaterial({ color: c, emissive: e });
   const g = new THREE.Group();
   const flaque = new THREE.Mesh(G.flaque, M.flaque); flaque.position.y = 0.04; g.add(flaque);
   const corps = new THREE.Group(); g.add(corps);
-  const ventre = new THREE.Mesh(G.corps, M.corps); ventre.position.y = 0.42; ventre.scale.set(1, 0.85, 1); corps.add(ventre);
+  const matCorps = lambert(st.corps, 0x0a0414);
+  const ventre = new THREE.Mesh(G.corps, matCorps); ventre.position.y = 0.42; ventre.scale.set(1, 0.85, 1); corps.add(ventre);
   const franges = [];
   for (let i = 0; i < 7; i++) {
-    const a = (i / 7) * Math.PI * 2, f = new THREE.Mesh(G.frange, M.corps);
+    const a = (i / 7) * Math.PI * 2, f = new THREE.Mesh(G.frange, matCorps);
     f.position.set(Math.sin(a) * 0.3, 0.12, Math.cos(a) * 0.3); corps.add(f); franges.push(f);
   }
+  // petits pieds qui trottinent
+  const pieds = [-0.13, 0.13].map(x => { const p = new THREE.Mesh(GX.pied, matCorps); p.position.set(x, 0.05, 0.12); p.scale.set(1, 0.6, 1.3); corps.add(p); return p; });
+  // ombrelle : toile rayée, bord et pompons, manche et crochet
   const ombrelle = new THREE.Group(); ombrelle.position.y = 0.72; corps.add(ombrelle);
-  const dome = new THREE.Mesh(G.dome, boss ? M.domeBoss : M.dome); dome.scale.y = 0.6; ombrelle.add(dome);
-  const pointe = new THREE.Mesh(G.pointe, M.pointe); pointe.position.y = 0.38; ombrelle.add(pointe);
-  const bord = new THREE.Mesh(G.bord, boss ? M.bordBoss : M.bord); bord.position.y = 0.02; ombrelle.add(bord);
+  const dome = new THREE.Mesh(st.toile, new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide })); dome.scale.y = 0.62; ombrelle.add(dome);
+  const matBord = lambert(st.bord, boss ? 0x7a4a00 : 0x2a1450);
+  const bord = new THREE.Mesh(G.bord, matBord); bord.position.y = 0.02; bord.scale.setScalar(1.08); ombrelle.add(bord);
+  for (let i = 0; i < 8; i++) { const a = (i / 8) * Math.PI * 2 + Math.PI / 8, p = new THREE.Mesh(GX.pompon, matBord); p.position.set(Math.cos(a) * 0.63, -0.03, Math.sin(a) * 0.63); ombrelle.add(p); }
+  const manche = new THREE.Mesh(GX.manche, matBord); manche.position.y = 0.5; ombrelle.add(manche);
+  const crochet = new THREE.Mesh(GX.crochet, matBord); crochet.position.set(0.1, 0.65, 0); ombrelle.add(crochet);
   if (boss) for (let i = 0; i < 6; i++) {                 // couronne de piquants dorés
-    const a = (i / 6) * Math.PI * 2, p = new THREE.Mesh(G.piquant, M.bordBoss);
+    const a = (i / 6) * Math.PI * 2, p = new THREE.Mesh(G.piquant, matBord);
     p.position.set(Math.sin(a) * 0.3, 0.3, Math.cos(a) * 0.3); p.rotation.set(Math.cos(a) * 0.5, 0, -Math.sin(a) * 0.5); ombrelle.add(p);
   }
-  const oeilMat = new THREE.MeshBasicMaterial({ color: OEIL_CALME.clone() });
-  for (const x of [-0.14, 0.14]) { const o = new THREE.Mesh(G.oeil, oeilMat); o.position.set(x, 0.5, 0.36); o.scale.y = boss ? 1 : 1.4; corps.add(o); }
-  return { g, corps, ombrelle, franges, oeilMat };
+  // visage : yeux qui suivent Fanal, sourcils qui se froncent, bouche à petites dents
+  const oeilMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(st.yeux) });
+  const yeux = [], sourcils = [];
+  for (const sx of [-1, 1]) {
+    const o = new THREE.Group(); o.position.set(sx * 0.15, 0.52, 0.33); corps.add(o);
+    const sc = new THREE.Mesh(GX.sclere, oeilMat); sc.scale.set(1, 1.25, 0.7); o.add(sc);
+    const pu = new THREE.Mesh(GX.pupille, MX.noir); pu.position.z = 0.07; o.add(pu);
+    const sr = new THREE.Mesh(GX.sourcil, MX.noir); sr.position.set(0, 0.15, 0.05); o.add(sr);
+    yeux.push(pu); sourcils.push({ m: sr, sx });
+  }
+  const bouche = new THREE.Mesh(GX.bouche, MX.noir); bouche.position.set(0, 0.36, 0.37); bouche.rotation.x = -0.3; corps.add(bouche);
+  for (const x of [-0.035, 0.035]) { const d = new THREE.Mesh(GX.dent, MX.blanc); d.position.set(x, 0.355, 0.405); d.rotation.x = Math.PI; corps.add(d); }
+  return { g, corps, ombrelle, franges, oeilMat, yeux, sourcils, pieds, type };
 }
 
 export function createOmbrelles(scene) {
@@ -65,12 +110,14 @@ export function createOmbrelles(scene) {
     const r = rng(P.seed * 7 + 5);
     const loin = d => d.angleTo(Y) > 0.3 + 8 / P.radius && d.angleTo(P.beacon.dir) > 0.4;
     const ajoute = (boss, dir) => {
-      const f = fabriquer(boss); scene.add(f.g);
+      const type = boss ? 'boss' : r() < 0.35 ? 'sauteuse' : 'marcheuse';
+      const f = fabriquer(type); scene.add(f.g);
       const taille = boss ? 3 : 1;
       f.g.scale.setScalar(taille);
       const cap = projectOnPlane(randomDir(r), dir).normalize();
       liste.push({ ...f, P, dir, maison: dir.clone(), cap, but: dir.clone(), etat: 'erre', t: r() * 6, pause: 0, fin: 0, r,
-        boss, taille, vie: boss ? P.bossVie : 1, vitesse: P.vitesse * (boss ? 0.8 : 1), vue: boss ? Infinity : VUE });
+        boss, taille, vie: boss ? P.bossVie : 1, vitesse: P.vitesse * (boss ? 0.8 : type === 'sauteuse' ? 1.2 : 1), vue: boss ? Infinity : VUE, hop: 0,
+        couleurYeux: new THREE.Color(STYLES[type].yeux) });
     };
     for (let i = 0; i < P.ombrelles; i++) {
       let dir = randomDir(r);
@@ -90,7 +137,12 @@ export function createOmbrelles(scene) {
     o.g.quaternion.setFromRotationMatrix(mat);
     o.t += dt;
     const vite = o.etat === 'chasse' ? 1 : 0.4;
-    o.corps.position.y = PLANE + Math.sin(o.t * 4) * 0.08;
+    // la sauteuse bondit (haut quand elle chasse), les autres se dandinent
+    o.hop = o.type === 'sauteuse' ? Math.abs(Math.sin(o.t * (o.etat === 'chasse' ? 7 : 4))) * (o.etat === 'chasse' ? 1.1 : 0.25) : 0;
+    o.corps.position.y = PLANE + o.hop + Math.sin(o.t * 4) * 0.08;
+    o.pieds.forEach((p, i) => { p.position.z = 0.12 + Math.sin(o.t * 12 + i * Math.PI) * 0.06 * vite; });
+    const fache = o.etat === 'chasse' ? 0.45 : 0.05;     // sourcils froncés quand elle chasse
+    o.sourcils.forEach(s => { s.m.rotation.z = -s.sx * fache; });
     o.ombrelle.rotation.x = 0.12 + vite * 0.25;          // l'ombrelle penche quand elle fonce
     o.ombrelle.rotation.y += dt * (1 + vite * 3);
     o.franges.forEach((f, i) => { f.position.y = 0.12 + Math.sin(o.t * 9 + i) * 0.04; });
@@ -150,14 +202,17 @@ export function createOmbrelles(scene) {
         }
       }
       const sonne = o.boss && o.pause > 0;
-      o.oeilMat.color.copy(sonne ? OEIL_SONNE : o.etat === 'chasse' ? OEIL_CHASSE : OEIL_CALME);
+      o.oeilMat.color.copy(sonne ? OEIL_SONNE : o.etat === 'chasse' ? OEIL_CHASSE : o.couleurYeux);
       placer(o, dt);
       if (sonne) o.ombrelle.rotation.y += dt * 14;        // le boss tourne sur lui-même, sonné
 
       // contact avec Fanal (les seuils grandissent avec la taille de l'Ombrelle)
       if (!ici) continue;
       const T = o.taille;
-      const h = tmp.copy(joueur.pos).sub(o.g.position).dot(joueur.up);
+      // les pupilles suivent Fanal
+      const vu = o.g.worldToLocal(tmp.copy(joueur.pos)).normalize();
+      o.yeux.forEach(p => p.position.set(vu.x * 0.035, Math.max(-0.03, Math.min(0.03, vu.y * 0.03)), 0.07));
+      const h = tmp.copy(joueur.pos).sub(o.g.position).dot(joueur.up) - o.hop * T;
       const cote = projectOnPlane(tmp.copy(joueur.pos).sub(o.g.position), joueur.up).length();
       if (joueur.vel.dot(joueur.up) < 0 && h > 0.45 * T && h < 1.6 * T && cote < 0.95 * T) {
         if (o.boss && o.pause > 0) { evts.push({ type: 'rebond', o }); continue; }   // sonné : il sert de trampoline

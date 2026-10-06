@@ -50,6 +50,19 @@ export const BIOMES = [
     decors: [['rocher', 8], ['maison', 3], ['touffe', 30], ['cristalBleu', 4]] },
   { nom: 'volcan', sol: { bas: 0x8a1f2c, base: 0xc23a3a, haut: 0xff6b4a, bosse: 0x5e2a2a }, motif: 2, motifCol: 0xffd23f, scale: 3.2, herbe: 0x7a1a22,
     decors: [['rocher', 16], ['cristalJaune', 10]] },
+  // nouveaux mondes : hantée (cimetière), île pirate, royaume, gourmande (sucreries géantes), fêtes d'hiver, bourg fantastique
+  { nom: 'hantee', sol: { bas: 0x3d2a6b, base: 0x5c3f99, haut: 0x8a6bd1, bosse: 0x6b4fb0 }, motif: 2, motifCol: 0x7dff9a, scale: 4, herbe: 0x2e1f52,
+    decors: [['rocher', 10], ['champiJaune', 8], ['touffe', 20]] },
+  { nom: 'pirate', sol: { bas: 0xe0a93a, base: 0xffd98a, haut: 0xfff2c4, bosse: 0x6fd6a0 }, motif: 0, motifCol: 0xffffff, herbe: 0x3fbf7f,
+    decors: [['rocher', 10], ['touffe', 20]] },
+  { nom: 'royaume', sol: { bas: 0x3fa34d, base: 0x6fd65a, haut: 0xa8f07a, bosse: 0x8fe06a }, motif: 1, motifCol: 0xffffff, herbe: 0x2f8a3a,
+    decors: [['rocher', 8], ['maison', 3], ['touffe', 30]] },
+  { nom: 'gourmande', sol: { bas: 0xff6fae, base: 0xff9ccf, haut: 0xffd0ea, bosse: 0xffe08a }, motif: 3, motifCol: 0x7cf0ff, scale: 7, herbe: 0xff4f9a,
+    decors: [['champiRose', 14], ['cristalRose', 8]] },
+  { nom: 'fetes', sol: { bas: 0xbfe6ff, base: 0xe8f7ff, haut: 0xffffff, bosse: 0xd6f0ff }, motif: 3, motifCol: 0xff5f7a, scale: 6, herbe: 0x8fc8e6,
+    decors: [['cristalBleu', 10], ['rocher', 6]] },
+  { nom: 'bourg', sol: { bas: 0x7fbf3f, base: 0xa8e05a, haut: 0xd4f58a, bosse: 0xe0c48a }, motif: 1, motifCol: 0xffffff, herbe: 0x5f9a2f,
+    decors: [['maison', 6], ['touffe', 30], ['rocher', 6]] },
 ];
 
 const DEBUT = ['Bru', 'Cen', 'Givr', 'Ver', 'Sab', 'Cor', 'Lag', 'Vol', 'Ast', 'Lum', 'Mir', 'Pla', 'Nim', 'Fla', 'Bri', 'Sel', 'Ond', 'Pom', 'Zé', 'Cal', 'Oré', 'Til', 'Mou', 'Pé'];

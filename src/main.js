@@ -12,6 +12,8 @@ import { createGardien } from './gardien.js';
 import { createVaisseau } from './vaisseau.js';
 import { createCosmos } from './cosmos.js';
 import { chargerDecors } from './amenagement.js';
+import { chargerFaune, peuplerFaune } from './faune.js';
+import { allumable } from './lumiere.js';
 import { GALAXIES, NB_GALAXIES, NB_PLANETES, planete, lireSauvegarde, nouvellePartie, sauver, cle, phareAllume } from './univers.js';
 
 // ---------- réglages du gameplay ----------
@@ -34,7 +36,7 @@ const fill = new THREE.DirectionalLight(0xb48cff, 0.6); fill.position.set(-40, -
 const glow = makeGlowTexture();
 const sky = createSky(scene, glow);
 const modeles = await chargerModeles();          // modèles .glb de public/modeles (s'il y en a)
-await chargerDecors();                           // objets 3D des planètes (public/decors, packs CC0)
+await Promise.all([chargerDecors(), chargerFaune()]);   // objets 3D et animaux des planètes (public/decors, packs CC0)
 const fanal = createFanal(glow, modeles);
 scene.add(fanal.object);
 const vaisseau = createVaisseau(glow, modeles);
@@ -73,6 +75,22 @@ function updateParts(dt) {
   pGeo.attributes.color.needsUpdate = true;
 }
 
+// ---------- onde de choc lumineuse (quand on ramasse un cristal) ----------
+const ondes = [];
+const ondeGeo = new THREE.RingGeometry(0.7, 1, 40);
+function onde(at, up, couleur = 0xffc56b) {
+  const m = new THREE.Mesh(ondeGeo, new THREE.MeshBasicMaterial({ color: couleur, transparent: true, opacity: 0.9, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide }));
+  m.position.copy(at); m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), up);
+  scene.add(m); ondes.push({ m, t: 0 });
+}
+function updateOndes(dt) {
+  for (let i = ondes.length - 1; i >= 0; i--) {
+    const o = ondes[i]; o.t += dt;
+    o.m.scale.setScalar(0.3 + o.t * 7); o.m.material.opacity = Math.max(0, 0.9 - o.t * 1.8);
+    if (o.t > 0.5) { scene.remove(o.m); o.m.material.dispose(); ondes.splice(i, 1); }
+  }
+}
+
 // ---------- état ----------
 const Y = new THREE.Vector3(0, 1, 0);
 const S = {
@@ -83,7 +101,7 @@ const S = {
   g: 0, i: 0,                  // galaxie et planète où se trouve Fanal
 };
 let save = lireSauvegarde();
-let planet = null, gardien = null;
+let planet = null, gardien = null, faune = null;
 const tmp = new THREE.Vector3(), tmp2 = new THREE.Vector3(), tmp3 = new THREE.Vector3(), mat = new THREE.Matrix4();
 
 // ---------- interface ----------
@@ -149,7 +167,7 @@ const projectOnPlane = (v, n) => v.addScaledVector(n, -v.dot(n));
 function decharger() {
   ombrelles.vider();
   if (planet) planet.dispose();
-  planet = null; gardien = null;
+  planet = null; gardien = null; faune = null;
 }
 
 // ciel et lumière aux couleurs de la planète (son humeur)
@@ -171,6 +189,7 @@ function charger(g, i, arrivee = false) {
   planet = createPlanet(scene, glow, modeles, L, allume, (save && save.ramasse[cle(g, i)]) || []);
   if (!allume) ombrelles.peupler(planet);
   gardien = !allume && L.gardien ? createGardien(glow, planet, L.gardien) : null;
+  faune = peuplerFaune(planet, allumable);
   // la Luciole est garée en haut de la planète
   garerVaisseau();
   planet.obstacles.push({ dir: Y.clone(), radius: 1.3, height: 2.2 });
@@ -406,7 +425,9 @@ function updateGame(dt) {
     if (chest.distanceTo(e.holder.position) < 1.25) {
       e.taken = true; e.holder.visible = false; S.power++;
       const got = P.embers.filter(x => x.taken).length;
-      sfx.ember(got); vibre('leger'); fanal.setMood('ravi', 0.9); burst(e.holder.position, 26, 0xffa040, 4);
+      sfx.cristal(got); vibre('moyen'); fanal.setMood('ravi', 0.9);
+      burst(e.holder.position, 40, 0xffb347, 6); burst(e.holder.position, 16, 0xfff3c4, 3, e.dir); onde(e.holder.position, e.dir);
+      $('braises').parentElement.classList.remove('pop'); void $('braises').offsetWidth; $('braises').parentElement.classList.add('pop');
       verifierPhare();
       hud();
     }
@@ -554,10 +575,10 @@ function frame(now) {
   clock += dt;
   if (S.state === 'jeu') { S.time += dt; updatePlayer(dt); updateGame(dt); }
   else if (S.state === 'titre') { S.camHeading.applyAxisAngle(S.up, dt * 0.25); }
-  if (planet && S.state !== 'cosmos') { animatePlanet(planet, dt, clock); updateOmbrelles(dt); }
+  if (planet && S.state !== 'cosmos') { animatePlanet(planet, dt, clock); updateOmbrelles(dt); if (faune) faune.update(dt, { pos: S.pos, actif: S.state === 'jeu' }); }
   if (S.state === 'jeu' || S.state === 'titre') vaisseau.animate(dt, 0, 0);
   if (S.state !== 'jeu') $('embarquer').hidden = true;
-  updateParts(dt);
+  updateParts(dt); updateOndes(dt);
   placeFanal(dt);
   updateCamera(dt);
   // cinématiques et univers : après la caméra, pour pouvoir la diriger
@@ -575,4 +596,4 @@ updateCamera(0, true);
 requestAnimationFrame(frame);
 
 // accès pour les tests automatiques
-window.__jeu = { S, get planet() { return planet; }, get save() { return save; }, ombrelles, cosmos, charger, decoller };
+window.__jeu = { S, get planet() { return planet; }, get save() { return save; }, get faune() { return faune; }, ombrelles, cosmos, charger, decoller };

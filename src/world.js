@@ -135,6 +135,29 @@ function formeRessource(nom) {
   return (FORMES[nom] = g);
 }
 
+// ---------- le cristal de lumière (les « braises » qui rallument le phare) : pièces partagées ----------
+const degradeColonne = (() => {
+  const c = document.createElement('canvas'); c.width = 4; c.height = 128;
+  const x = c.getContext('2d'), g = x.createLinearGradient(0, 128, 0, 0);
+  g.addColorStop(0, 'rgba(255,255,255,.9)'); g.addColorStop(1, 'rgba(255,255,255,0)');
+  x.fillStyle = g; x.fillRect(0, 0, 4, 128);
+  return new THREE.CanvasTexture(c);
+})();
+const CRISTAL = {
+  facettes: (() => { const g = new THREE.CylinderGeometry(0.2, 0.2, 0.32, 6, 1); const h = new THREE.ConeGeometry(0.2, 0.3, 6); h.translate(0, 0.31, 0);
+    const b = new THREE.ConeGeometry(0.2, 0.42, 6); b.rotateX(Math.PI); b.translate(0, -0.37, 0);
+    const m = mergeGeometries([g, h, b].map(x => { x.deleteAttribute('uv'); return x; })); return m.toNonIndexed(); })(),
+  coeur: new THREE.OctahedronGeometry(0.12),
+  anneau: new THREE.TorusGeometry(0.42, 0.025, 6, 32),
+  etincelle: new THREE.OctahedronGeometry(0.06),
+  colonne: (() => { const g = new THREE.CylinderGeometry(0.12, 0.3, 9, 10, 1, true); g.translate(0, 4.5, 0); return g; })(),
+  matFacettes: new THREE.MeshStandardMaterial({ color: 0xffb347, emissive: 0xff7a00, emissiveIntensity: 0.55, roughness: 0.15, metalness: 0.3, flatShading: true, transparent: true, opacity: 0.88 }),
+  matCoeur: new THREE.MeshBasicMaterial({ color: 0xfff3c4 }),
+  matAnneau: new THREE.MeshStandardMaterial({ color: 0xffd23f, emissive: 0xffa000, emissiveIntensity: 0.6, metalness: 0.8, roughness: 0.25 }),
+  matColonne: new THREE.MeshBasicMaterial({ color: 0xffb347, map: degradeColonne, transparent: true, opacity: 0.35, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide }),
+};
+for (const m of Object.values(CRISTAL)) m.userData.partage = true;   // partagés entre les planètes : jamais libérés
+
 // ---------- une planète (centrée à l'origine) ----------
 // L : description venant de univers.js ; allume : le phare est déjà rallumé (planète revisitée)
 // ramasses : numéros des ressources déjà prises sur cette planète (sauvegarde)
@@ -249,14 +272,20 @@ export function createPlanet(scene, glow, modeles, L, allume = false, ramasses =
   for (let i = 0; i < L.embers; i++) {
     const coin = coins[i], dd = coin ? coin.dir : freeDir(0.55); marquer(dd, 0.3);
     const hauteur = coin ? coin.h : 0.9;
-    const gem = new THREE.Mesh(new THREE.OctahedronGeometry(0.26), new THREE.MeshBasicMaterial({ color: 0xffb347 }));
-    const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: glow, color: 0xff8a3d, transparent: true, opacity: 0.85, depthWrite: false, blending: THREE.AdditiveBlending }));
-    sp.scale.setScalar(1.5);
-    const inner = new THREE.Group(); inner.add(gem, sp);
-    const holder = new THREE.Group(); holder.add(inner);
+    // le cristal de lumière : facettes taillées, cœur qui palpite, anneau doré, étincelles en orbite, colonne de lumière
+    const gem = new THREE.Mesh(CRISTAL.facettes, CRISTAL.matFacettes);
+    const coeur = new THREE.Mesh(CRISTAL.coeur, CRISTAL.matCoeur);
+    const anneau = new THREE.Mesh(CRISTAL.anneau, CRISTAL.matAnneau); anneau.rotation.x = Math.PI / 2.6;
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: glow, color: 0xff9a3d, transparent: true, opacity: 0.85, depthWrite: false, blending: THREE.AdditiveBlending }));
+    sp.scale.setScalar(1.8);
+    const orbites = new THREE.Group();
+    for (let k = 0; k < 3; k++) { const e = new THREE.Mesh(CRISTAL.etincelle, CRISTAL.matCoeur); const a = (k / 3) * Math.PI * 2; e.position.set(Math.cos(a) * 0.5, 0, Math.sin(a) * 0.5); orbites.add(e); }
+    const colonne = new THREE.Mesh(CRISTAL.colonne, CRISTAL.matColonne);
+    const inner = new THREE.Group(); inner.add(gem, coeur, anneau, sp, orbites);
+    const holder = new THREE.Group(); holder.add(inner, colonne);
     placeOn(holder, dd, hauteur);
     planet.group.add(holder);
-    planet.embers.push({ holder, inner, gem, dir: dd, taken: false, phase: r() * 6 });
+    planet.embers.push({ holder, inner, gem, coeur, anneau, orbites, halo: sp, dir: dd, taken: false, phase: r() * 6 });
   }
   if (!avec3D) decorsDessines();
 
@@ -332,7 +361,7 @@ export function createPlanet(scene, glow, modeles, L, allume = false, ramasses =
   planet.ressources = res;
 
   // ---- particules d'ambiance (selon l'humeur) : lucioles, pollen, bulles, braises, neige, étoiles ----
-  const type = L.biome === 'givre' ? 'neige' : (L.biome === 'lave' || L.biome === 'volcan') ? 'braises' : L.humeur ? L.humeur.particules : 'pollen';
+  const type = (L.biome === 'givre' || L.biome === 'fetes') ? 'neige' : (L.biome === 'lave' || L.biome === 'volcan') ? 'braises' : L.biome === 'hantee' ? 'lucioles' : L.humeur ? L.humeur.particules : 'pollen';
   const NP = type === 'neige' ? 220 : 140, ppos = new Float32Array(NP * 3), pcol = new Float32Array(NP * 3);
   const couleurP = new THREE.Color(type === 'neige' ? 0xffffff : type === 'braises' ? 0xffa040 : L.palette ? L.palette.accent : 0xffffff);
   const parts = [];
@@ -372,8 +401,8 @@ export function createPlanet(scene, glow, modeles, L, allume = false, ramasses =
   planet.dispose = () => {
     scene.remove(planet.group);
     planet.group.traverse(o => {
-      if (o.geometry && !o.userData.partage) o.geometry.dispose();
-      if (o.material) (Array.isArray(o.material) ? o.material : [o.material]).forEach(m => m.dispose());
+      if (o.geometry && !o.userData.partage && !o.geometry.userData.partage) o.geometry.dispose();
+      if (o.material) (Array.isArray(o.material) ? o.material : [o.material]).forEach(m => { if (!m.userData.partage) m.dispose(); });
     });
   };
   return planet;
@@ -408,7 +437,12 @@ export function animatePlanet(p, dt, clock) {
   for (const e of p.embers) {
     if (e.taken) continue;
     e.inner.position.y = Math.sin(clock * 2.5 + e.phase) * 0.15;
-    e.gem.rotation.y += dt * 2;
+    e.gem.rotation.y += dt * 1.6;
+    e.anneau.rotation.z += dt * 2.4;
+    e.orbites.rotation.y -= dt * 3; e.orbites.rotation.x = Math.sin(clock + e.phase) * 0.5;
+    const pouls = 0.5 + 0.5 * Math.sin(clock * 5 + e.phase);
+    e.coeur.scale.setScalar(0.85 + pouls * 0.3);
+    e.halo.material.opacity = 0.6 + pouls * 0.35; e.halo.scale.setScalar(1.6 + pouls * 0.5);
   }
   const b = p.beacon;
   if (p.lit) {

@@ -37,7 +37,44 @@ const CATALOGUE = {
   s_rock_crystalsLargeA: [4.5, 'plein'], s_rock_crystalsLargeB: [4.5, 'plein'], s_rock_crystals: [3.5, null], s_meteor_detailed: [E, 'plein'],
   s_meteor_half: [E, 'plein'], s_crater: [3.5, null], s_craterLarge: [3.5, null], s_rock_largeA: [E, 'plein'], s_rock_largeB: [E, 'plein'],
   s_rocks_smallA: [E, null], s_bones: [2.5, null],
+  // cimetière (g_ : planète hantée)
+  'g_pine-crooked': [2.4, 'tronc'], 'g_pine-fall-crooked': [2.4, 'tronc'], g_pine: [2.4, 'tronc'], 'g_gravestone-cross': [2.4, 'plein'],
+  'g_gravestone-round': [2.4, 'plein'], 'g_gravestone-decorative': [2.4, 'plein'], 'g_gravestone-broken': [2.4, null], 'g_crypt-small': [2.4, 'plein'],
+  g_crypt: [2.4, 'plein'], 'g_iron-fence': [2.4, null], 'g_iron-fence-damaged': [2.4, null], 'g_pumpkin-carved': [3.5, 'plein'],
+  'g_pumpkin-tall-carved': [3.5, 'plein'], 'g_lantern-candle': [2.4, null], 'g_lightpost-single': [2.4, 'tronc'], 'g_candle-multiple': [2.4, null],
+  'g_coffin-old': [2.4, 'plein'], 'g_altar-stone': [2.4, 'plein'], 'g_rocks-tall': [2.4, 'plein'], g_rocks: [2.4, 'plein'], 'g_trunk-long': [2.4, 'plein'],
+  'g_pillar-obelisk': [2.4, 'tronc'], 'g_fire-basket': [2.4, null], 'g_hay-bale': [2.4, 'plein'], 'g_urn-round': [2.4, null],
+  // pirates (r_ : île au trésor)
+  'r_palm-bend': [1.4, 'tronc'], 'r_palm-detailed-straight': [1.4, 'tronc'], 'r_palm-straight': [1.4, 'tronc'], 'r_ship-wreck': [0.7, 'plein'],
+  r_chest: [1.4, 'plein'], r_crate: [1.4, 'plein'], 'r_crate-bottles': [1.4, 'plein'], r_barrel: [1.4, 'plein'], 'r_bottle-large': [1.4, null],
+  r_cannon: [1.4, 'plein'], 'r_flag-pirate-high': [1.4, null], 'r_tower-watch': [1.4, 'plein'], 'r_rocks-sand-a': [0.7, 'plein'],
+  'r_rocks-sand-b': [0.7, 'plein'], 'r_rocks-a': [0.7, 'plein'], 'r_boat-row-small': [1.4, null], 'r_structure-platform-dock-small': [1.4, 'plein'],
+  'r_platform-planks': [1.4, 'plein'], 'r_patch-grass-foliage': [1, null], 'r_grass-plant': [1.4, null],
+  // château (c_ : royaume)
+  'c_tower-square': [3, 'plein'], 'c_tower-hexagon-base': [3, 'plein'], 'c_tower-hexagon-top': [3, null], 'c_tower-square-top-roof': [3, null],
+  'c_tree-large': [2.7, 'tronc'], 'c_tree-small': [2.7, 'tronc'], 'c_flag-banner-long': [2, null], 'c_flag-pennant': [2.5, null],
+  'c_siege-catapult': [2, 'plein'], 'c_siege-ballista': [2, 'plein'], 'c_rocks-large': [3, 'plein'], 'c_rocks-small': [2, null],
+  'c_wall-pillar': [1.8, 'plein'], 'c_stairs-stone': [3, null], c_gate: [3, null], 'c_bridge-straight-pillar': [2.4, 'plein'],
+  // gourmandises géantes (f_ : planète gourmande)
+  'f_donut-sprinkles': [10, 'plein'], 'f_donut-chocolate': [10, 'plein'], f_cupcake: [7, 'plein'], 'f_cake-birthday': [6, 'plein'],
+  f_lollypop: [10, 'tronc'], 'f_ice-cream': [7, 'tronc'], 'f_ice-cream-cne': [9, 'tronc'], 'f_candy-bar': [10, 'plein'],
+  'f_cookie-chocolate': [9, null], f_cherries: [8, null], f_apple: [6, 'plein'], f_pear: [6, 'plein'], f_pineapple: [8, 'tronc'],
+  f_watermelon: [4, 'plein'], f_strawberry: [7, null], f_cheese: [4, 'plein'], f_mushroom: [8, null], f_croissant: [5, 'plein'],
+  f_muffin: [6, 'plein'], f_pie: [4, 'plein'], f_banana: [5, null], f_grapes: [6, 'tronc'],
+  // fêtes de l'hiver (h_)
+  'h_snowman-hat': [2.4, 'plein'], h_snowman: [2.4, 'plein'], 'h_tree-decorated-snow': [2.4, 'tronc'], 'h_present-a-cube': [2.4, 'plein'],
+  'h_present-b-round': [2.4, 'plein'], 'h_present-a-round': [2.4, 'plein'], 'h_candy-cane-red': [6, null], 'h_candy-cane-green': [6, null],
+  'h_gingerbread-man': [4, null], h_reindeer: [2.4, 'plein'], h_sled: [2.4, null], h_lantern: [2.4, 'tronc'], 'h_rocks-large': [1, 'plein'],
+  'h_snow-pile': [2.4, null], 'h_lights-colored': [2.4, null], h_nutcracker: [2.4, 'tronc'],
+  // bourg fantastique (v_)
+  v_tree: [2.3, 'tronc'], 'v_tree-crooked': [2.3, 'tronc'], 'v_tree-high-round': [2.3, 'tronc'], 'v_tree-high': [2.3, 'tronc'],
+  v_hedge: [2.3, null], 'v_hedge-large': [2.3, 'plein'], 'v_fountain-round': [2.3, null], 'v_stall-red': [2.3, 'plein'], 'v_stall-green': [2.3, 'plein'],
+  v_cart: [2.3, 'plein'], v_lantern: [2.3, 'tronc'], 'v_banner-red': [2.3, null], 'v_rock-large': [2.3, 'plein'], 'v_rock-wide': [2.3, 'plein'],
+  'v_pillar-stone': [2.3, 'tronc'], v_fence: [2.3, null],
 };
+// les packs rangés dans leur propre dossier (chacun a sa texture colormap.png) : g_pine → decors/g/pine.glb
+const fichier = id => (/^[a-z]_/.test(id) && !/^[nps]_/.test(id) ? `./decors/${id[0]}/${id.slice(2)}.glb` : `./decors/${id}.glb`);
+const PACKS_COLORES = /^[grcfhva]_/;                       // packs déjà très colorés : on garde leurs couleurs
 
 // ambiances : arbres, petits (fleurs, herbes), rochers, escalier [bas, moyen, haut], îlot flottant, cachette, déco
 // feuillage : teinte des feuilles des arbres (null = couleurs d'origine)
@@ -82,6 +119,31 @@ const THEMES = {
     petits: ['s_crater', 's_rocks_smallA', 'n_rock_smallTopA'], rochers: ['s_meteor_detailed', 's_rock_largeB', 'n_stone_largeB'],
     escalier: ['s_meteor_half', 's_rock_largeA', 'n_stone_tallF'], ilot: 'n_platform_stone', cachette: ['n_campfire_stones'],
     deco: ['s_bones', 's_craterLarge', 'n_campfire_stones'], feuillage: null },
+  // nouveaux mondes (packs Kenney Graveyard, Pirate, Castle, Food, Holiday, Fantasy Town)
+  hantee: { arbres: ['g_pine-crooked', 'g_pine-fall-crooked', 'g_pine'], champis: ['g_pumpkin-carved', 'g_pumpkin-tall-carved', 'g_lightpost-single', 'n_mushroom_tanTall'],
+    petits: ['g_candle-multiple', 'g_gravestone-broken', 'g_urn-round', 'n_grass', 'g_lantern-candle'], rochers: ['g_gravestone-cross', 'g_gravestone-round', 'g_gravestone-decorative', 'g_rocks-tall'],
+    escalier: ['g_rocks', 'g_crypt', 'g_crypt-small'], ilot: 'n_platform_stone', cachette: ['g_crypt-small'],
+    deco: ['g_iron-fence', 'g_iron-fence-damaged', 'g_coffin-old', 'g_altar-stone', 'g_fire-basket', 'g_hay-bale', 'g_pillar-obelisk'], feuillage: null },
+  pirate: { arbres: ['r_palm-bend', 'r_palm-straight', 'r_palm-detailed-straight'], champis: ['r_barrel', 'r_crate', 'r_crate-bottles', 'r_bottle-large'],
+    petits: ['r_grass-plant', 'n_grass', 's_rocks_smallA', 'n_flower_yellowB'], rochers: ['r_rocks-sand-a', 'r_rocks-sand-b', 'r_rocks-a'],
+    escalier: ['r_crate', 'r_chest', 'r_tower-watch'], ilot: 'r_platform-planks', cachette: ['r_boat-row-small'],
+    deco: ['r_cannon', 'r_flag-pirate-high', 'r_chest', 'r_ship-wreck', 'r_structure-platform-dock-small'], feuillage: null },
+  royaume: { arbres: ['c_tree-large', 'c_tree-small', 'n_tree_cone'], champis: ['c_flag-banner-long', 'c_flag-pennant', 'n_mushroom_redGroup'],
+    petits: ['n_flower_redA', 'n_flower_yellowB', 'n_grass', 'c_rocks-small'], rochers: ['c_rocks-large', 'c_wall-pillar', 'c_bridge-straight-pillar'],
+    escalier: ['c_rocks-large', 'c_wall-pillar', 'c_tower-square'], ilot: 'n_platform_stone', cachette: ['c_gate'],
+    deco: ['c_siege-catapult', 'c_siege-ballista', 'c_flag-banner-long', 'c_stairs-stone', 'c_tower-hexagon-base'], feuillage: null },
+  gourmande: { arbres: ['f_lollypop', 'f_ice-cream', 'f_ice-cream-cne', 'f_pineapple'], champis: ['f_cupcake', 'f_muffin', 'f_watermelon', 'f_grapes'],
+    petits: ['f_cherries', 'f_strawberry', 'f_apple', 'f_pear', 'f_cookie-chocolate', 'f_mushroom'], rochers: ['f_donut-sprinkles', 'f_donut-chocolate', 'f_cheese', 'f_croissant'],
+    escalier: ['f_donut-sprinkles', 'f_cake-birthday', 'f_cupcake'], ilot: 'f_pie', cachette: ['f_cake-birthday'],
+    deco: ['f_candy-bar', 'f_banana', 'f_croissant', 'f_cheese'], feuillage: null },
+  fetes: { arbres: ['h_tree-decorated-snow', 'p_tree-snow', 'p_tree-pine-snow'], champis: ['h_present-a-cube', 'h_present-a-round', 'h_present-b-round', 'h_candy-cane-red', 'h_candy-cane-green'],
+    petits: ['h_snow-pile', 'n_stone_smallC', 'h_gingerbread-man'], rochers: ['h_snowman', 'h_snowman-hat', 'p_block-snow'],
+    escalier: ['p_block-snow-low-large', 'p_block-snow', 'p_block-snow-large-tall'], ilot: 'n_platform_stone', cachette: ['h_sled'],
+    deco: ['h_reindeer', 'h_lantern', 'h_nutcracker', 'h_lights-colored', 'h_rocks-large'], feuillage: 0x8fdcff },
+  bourg: { arbres: ['v_tree', 'v_tree-high-round', 'v_tree-crooked', 'v_tree-high'], champis: ['v_stall-red', 'v_stall-green', 'v_cart', 'v_lantern'],
+    petits: ['n_flower_redA', 'n_flower_yellowB', 'n_flower_purpleC', 'n_grass_large', 'p_flowers-tall'], rochers: ['v_rock-large', 'v_rock-wide', 'v_hedge-large'],
+    escalier: ['p_block-grass-low-large', 'v_rock-wide', 'p_block-grass-large-tall'], ilot: 'n_platform_grass', cachette: ['v_stall-red'],
+    deco: ['v_fountain-round', 'v_banner-red', 'v_fence', 'v_pillar-stone', 'v_lantern'], feuillage: null },
 };
 
 // ---------- chargement des modèles (une fois, au démarrage) ----------
@@ -90,7 +152,7 @@ export const decorsPrets = () => Object.keys(MODELES).length > 0;
 export async function chargerDecors() {
   const loader = new GLTFLoader();
   await Promise.all(Object.entries(CATALOGUE).map(([id, [echelle]]) =>
-    loader.loadAsync(`./decors/${id}.glb`).then(g => { MODELES[id] = preparer(g.scene, echelle); }).catch(e => console.warn('Décor illisible :', id, e))));
+    loader.loadAsync(fichier(id)).then(g => { MODELES[id] = preparer(g.scene, echelle); }).catch(e => console.warn('Décor illisible :', id, e))));
   return Object.keys(MODELES).length > 0;
 }
 // agrandit le modèle (même échelle pour tout un pack : les proportions restent justes), centré, posé en y = 0
@@ -278,7 +340,7 @@ export function amenager(ctx) {
   for (const [id, mats] of lots) {
     for (const { geo, mat } of MODELES[id].morceaux) {
       const m = mat.clone();
-      recolorer(m, L, T);
+      if (!PACKS_COLORES.test(id)) recolorer(m, L, T);
       const im = new THREE.InstancedMesh(geo, allumable(m, U), mats.length);
       mats.forEach((x, i) => im.setMatrixAt(i, x));
       im.instanceMatrix.needsUpdate = true;

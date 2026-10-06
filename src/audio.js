@@ -53,6 +53,11 @@ export const sfx = {
   touche: () => { tone({ freq: 330, to: 110, type: 'sawtooth', dur: 0.35, vol: 0.08 }); tone({ freq: 260, to: 90, type: 'triangle', dur: 0.4, vol: 0.1, delay: 0.05 }); },
   land: () => tone({ freq: 140, to: 70, type: 'sine', dur: 0.12, vol: 0.18 }),
   piece: n => { tone({ freq: note(784, n % 10), type: 'sine', dur: 0.12, vol: 0.13 }); tone({ freq: note(784, (n % 10) + 4), type: 'triangle', dur: 0.14, vol: 0.07, delay: 0.04 }); },
+  cristal: n => {   // carillon cristallin qui monte d'une note à chaque cristal, avec un scintillement
+    [0, 2, 4].forEach((s, i) => tone({ freq: note(659, n + s), type: 'triangle', dur: 0.35, vol: 0.14, delay: i * 0.05 }));
+    tone({ freq: note(1318, n + 4), type: 'sine', dur: 0.6, vol: 0.08, delay: 0.12 });
+    noise({ dur: 0.35, vol: 0.05, from: 6000, to: 12000 });
+  },
   ember: n => { tone({ freq: note(523, n), type: 'triangle', dur: 0.25, vol: 0.2 }); tone({ freq: note(523, n + 2), type: 'sine', dur: 0.3, vol: 0.12, delay: 0.06 }); },
   ready: () => [0, 2, 4, 5].forEach((s, i) => tone({ freq: note(392, s), type: 'triangle', dur: 0.35, vol: 0.16, delay: i * 0.09 })),
   beacon: () => { [0, 2, 4, 7].forEach(s => tone({ freq: note(262, s), type: 'sawtooth', dur: 1.6, vol: 0.05 })); [5, 7, 9, 10].forEach((s, i) => tone({ freq: note(262, s), type: 'triangle', dur: 0.6, vol: 0.12, delay: 0.15 + i * 0.12 })); },
