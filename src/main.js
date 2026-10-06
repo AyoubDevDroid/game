@@ -412,7 +412,7 @@ function updatePlayer(dt) {
   const n = tmp2.copy(S.pos).sub(P.center);
   const dist = n.length(); n.normalize();
   const snap = S.onGround && vr <= 0 ? 0.35 : 0, sol = P.surface(n);
-  if (dist <= sol + snap) {
+  if (dist <= sol + snap && !(P.abime && dist < sol - 1.2)) {          // archipel : tombé sous le bord d'une île, on ne remonte pas d'un coup dessus
     S.pos.copy(P.center).addScaledVector(n, sol);
     const vrNow = S.vel.dot(n);
     if (vrNow < 0) S.vel.addScaledVector(n, -vrNow);

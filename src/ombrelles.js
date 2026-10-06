@@ -225,10 +225,11 @@ export function createOmbrelles(scene, modeles = {}) {
   function peupler(P) {
     vider();
     const r = rng(P.seed * 7 + 5), roster = ROSTER[P.biome] || ROSTER.menthe;
-    const loin = d => d.angleTo(Y) > 0.3 + 8 / P.radius && d.angleTo(P.beacon.dir) > 0.4 && (!P.terre || P.terre(d));
+    const loin = d => d.angleTo(Y) * P.radius > 18 && d.angleTo(P.beacon.dir) * P.radius > 13 && (!P.terre || P.terre(d));
     for (let i = 0; i < P.ombrelles; i++) {
-      let dir = randomDir(r);
-      for (let k = 0; k < 200 && !loin(dir); k++) dir = randomDir(r);
+      const tirage = () => P.dirAleatoire ? P.dirAleatoire(r) : randomDir(r);
+      let dir = tirage();
+      for (let k = 0; k < 400 && !loin(dir); k++) dir = tirage();
       ajouter(P, roster[i % roster.length], dir, 1, r);
     }
     if (P.boss) ajouter(P, 'boss', P.beacon.dir.clone().negate(), 3, r);     // le boss attend à l'opposé du Grand Phare
@@ -348,7 +349,7 @@ export function createOmbrelles(scene, modeles = {}) {
   }
 
   function erre(o, dt) {
-    if (o.dir.angleTo(o.but) < 0.08 || o.r() < dt * 0.25) o.but.copy(o.maison).addScaledVector(randomDir(o.r), 6 / o.P.radius).normalize();
+    if (o.dir.angleTo(o.but) * o.P.radius < 2.7 || o.r() < dt * 0.25) o.but.copy(o.maison).addScaledVector(randomDir(o.r), 6 / o.P.radius).normalize();
     const voulu = projectOnPlane(o.but.clone().sub(o.dir), o.dir);
     if (voulu.lengthSq() > 1e-6) o.cap.lerp(voulu.normalize(), 1 - Math.exp(-2 * dt)).normalize();
     if (o.pause <= 0) avancer(o, o.type === 'tireuse' ? 0.6 : VITESSE_ERRE, dt);

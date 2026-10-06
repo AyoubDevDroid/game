@@ -50,7 +50,7 @@ export function peuplerFaune(planet, allumable) {
     o.material = matsPlanete.get(o.material);
   });
 
-  const nbGroupes = 4 + Math.floor(L.radius / 7);
+  const nbGroupes = 4 + Math.floor((L.taille || L.radius) / 7);
   for (let gI = 0; gI < nbGroupes; gI++) {
     const espece = especes[gI % especes.length], caractere = ESPECES[espece];
     const centre = planet.freeDir(0.5), nb = caractere === 'volant' ? 2 : 2 + Math.floor(r() * 2);

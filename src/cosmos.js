@@ -64,7 +64,7 @@ export function createCosmos({ scene, glow, camera, canvas, sky, vaisseau, onArr
       for (let k = 0; k <= 96; k++) { const a = (k / 96) * Math.PI * 2; pts.push(new THREE.Vector3(Math.cos(a) * rp, p.y, Math.sin(a) * rp)); }
       galaxie.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineBasicMaterial({ color: 0x7fb4ff, transparent: true, opacity: allume ? 0.35 : 0.14 })));
       // la planète : couleurs du biome, grises tant que le phare est éteint
-      const taille = L.boss ? 4.2 : 1.6 + (L.radius - 15) * 0.12;
+      const taille = L.boss ? 4.2 : 1.6 + ((L.taille || L.radius) - 15) * 0.12;
       const geo = boule.clone(), P = geo.attributes.position, cols = new Float32Array(P.count * 3), v = new THREE.Vector3();
       const bas = new THREE.Color(L.sol.bas), base = new THREE.Color(L.sol.base), haut = new THREE.Color(L.sol.haut);
       for (let k = 0; k < P.count; k++) {

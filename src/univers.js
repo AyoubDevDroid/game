@@ -138,7 +138,9 @@ export function planete(g, i) {
   const seed = 1000 + g * 37 + i * 11, r = rng(seed);
   const boss = i === NB_PLANETES - 1;
   const biome = BIOMES[ordreBiomes(g)[i % BIOMES.length]];
-  const archipel = !boss && !biome.mer && !biome.nuages && i % 5 === 3;   // îles sur une mer de nuages
+  // niveaux plats façon parcours : une suite d'îles flottantes du départ jusqu'au phare (gravité « vers le bas »)
+  const plat = !boss && !biome.mer && !biome.nuages && i % 3 === 1;
+  const archipel = plat || (!boss && !biome.mer && !biome.nuages && i % 5 === 3);   // îles sur une mer de nuages
   const hu = HUMEURS[g === 0 && i === 0 ? 2 : Math.floor(r() * HUMEURS.length)];
   // teinte principale : celle du biome, décalée librement (une planète de lave peut être rose ou violette)
   const H = teinteDe(biome.sol.base) + (g === 0 && i < 2 ? 0 : (r() - 0.5) * 0.36);
@@ -154,15 +156,18 @@ export function planete(g, i) {
   const dir = () => { const u = r() * 2 - 1, a = r() * Math.PI * 2, s = Math.sqrt(1 - u * u); return [s * Math.cos(a), u, s * Math.sin(a)]; };
   let beacon = dir();
   while (beacon[1] > 0.2) beacon = dir();                 // le phare n'est jamais juste à côté du vaisseau
+  const taille = plat ? 34 + Math.round(g * 0.4) : radius;   // taille « jouable » (sert à doser le contenu)
+  const R = plat ? 1500 : radius;                          // niveau plat : une planète si grande qu'on ne voit plus la courbure
+  if (plat) { const a = (190 + (seed % 7) * 12) / R; beacon = [0, Math.cos(a), Math.sin(a)]; }
   return {
-    g, i, seed, nom, boss, radius, biome: biome.nom,
+    g, i, seed, nom, boss, radius: R, taille, plat, biome: biome.nom,
     sol, motif: biome.motif, motifCol: pal.motif, scale: biome.scale, herbe: pal.herbe, decors: biome.decors,
     palette: pal, humeur: hu, forme: biome.mer || biome.nuages || archipel ? 'doux' : forme, archipel, signature: biome.nuages && signature === 'canyon' ? 'jardin' : signature, ressource,
     mer: biome.mer ? 0.35 : 0,                             // niveau de la mer au-dessus du rayon (planète océan)
     nuages: !!biome.nuages, gravite: biome.nuages ? 0.72 : 1,
     beacon, relief: biome.mer ? 1.25 : biome.nuages ? 0.35 : 0.5 + r() * 0.5, freq: 1 + r() * 0.6, bosse: { h: 1.2 + r() * 1.2, w: 0.25 + r() * 0.12 },
-    embers: boss ? 4 : 6 + Math.floor(r() * 3) + Math.floor(radius / 8) + Math.floor(g / 4),
-    ombrelles: boss ? 2 + Math.floor(g / 3) : Math.min(18, 2 + Math.floor(radius / 5) + Math.floor(g * 0.6)),
+    embers: boss ? 4 : 6 + Math.floor(r() * 3) + Math.floor(taille / 8) + Math.floor(g / 4),
+    ombrelles: boss ? 2 + Math.floor(g / 3) : Math.min(18, 2 + Math.floor(taille / 5) + Math.floor(g * 0.6)),
     vitesse: 3.4 + g * 0.12,                               // vitesse des Ombrelles (Fanal court à 7,5)
     bossVie: 3 + Math.floor(g / 4),
     gardien: boss ? null : GARDIENS[Math.floor(r() * GARDIENS.length)],
