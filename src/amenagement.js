@@ -108,6 +108,31 @@ function preparer(scene, s) {
   return { morceaux, l: size.x * s, p: size.z * s, h: hauteur };
 }
 
+// ---------- couleurs : chaque matière des modèles prend une teinte de la palette de la planète ----------
+// (noms des matières Kenney : leafsGreen, woodBark, stone, rock, crystal, colorRed…)
+function recolorer(m, L, T) {
+  const p = L.palette;
+  if (!p) { if (T.feuillage && /^leafs/.test(m.name || '')) m.color = new THREE.Color(T.feuillage); return; }
+  const n = m.name || '', em = (L.humeur && L.humeur.emissif) || 0.1;
+  let c = null, eclat = 0;
+  if (/^leafsFall/.test(n)) { c = p.feuillageAutomne; eclat = em; }
+  else if (/^leafsDark/.test(n)) { c = p.feuillage2; eclat = em; }
+  else if (/^leafs/.test(n) || n === 'grass') { c = p.feuillage; eclat = em; }
+  else if (/^wood(Inner|Birch)/.test(n)) c = p.boisClair;
+  else if (/^wood/.test(n)) c = p.bois;
+  else if (/^(stone|rock)Dark/.test(n)) c = p.pierreSombre;
+  else if (/^(stone|rock)/.test(n)) c = p.pierre;
+  else if (n === 'dirt') c = p.terre;
+  else if (n === 'crystal') { c = p.cristal; eclat = 0.55; }
+  else if (n === 'colorRed') { c = p.fleurs[0]; eclat = 0.25; }
+  else if (n === 'colorYellow' || n === 'colorTan') { c = p.fleurs[1]; eclat = 0.25; }
+  else if (n === 'colorPurple') { c = p.fleurs[2]; eclat = 0.25; }
+  else if (n === 'colormap') { m.color = new THREE.Color(0xffffff).lerp(new THREE.Color(p.sol.base), 0.45); return; }   // blocs texturés
+  if (c === null) return;
+  m.color = new THREE.Color(c);
+  if (eclat && m.emissive) { m.emissive = new THREE.Color(c); m.emissiveIntensity = eclat; }
+}
+
 // ---------- aménagement d'une planète ----------
 // ctx : { L, r, k, center, U, group, surfacePoint, surface, freeDir, marquer, allumable, solides }
 // renvoie les « coins » où cacher des braises : [{ dir, h }]
@@ -204,7 +229,43 @@ export function amenager(ctx) {
     for (let j = 0; j < 3; j++) { const a = r() * 6.28; poser(choix(r() < 0.5 ? T.deco : T.petits), decale(dir, rep, Math.cos(a) * 1.8, Math.sin(a) * 1.8)); }
   }
 
-  // 6. semis : fleurs, herbes, rochers isolés partout
+  // 6. l'élément signature de la planète : ce qu'on retient d'elle
+  const centre = freeDir(1.2), rc = repere(centre, r() * 6); marquer(centre, 1.3);
+  const autour = (d, a) => decale(centre, rc, Math.cos(a) * d, Math.sin(a) * d);
+  if (L.signature === 'geants') {                           // champignons et arbres géants
+    for (let j = 0; j < 8; j++) {
+      const a = (j / 8) * Math.PI * 2 + r() * 0.5;
+      poser(r() < 0.6 ? choix(['n_mushroom_redTall', 'n_mushroom_tanTall']) : choix(T.arbres), autour(2.6 + r() * 4, a), { echelle: 2 + r() * 0.9 });
+    }
+    coins.push({ dir: centre, h: 0.9 });
+  } else if (L.signature === 'cristaux') {                  // forêt de cristaux lumineux
+    for (let j = 0; j < 14; j++) poser(choix(['s_rock_crystalsLargeA', 's_rock_crystalsLargeB', 's_rock_crystals']), autour(1.6 + r() * 5.5, r() * 6.28), { echelle: 1 + r() * 1.3 });
+    coins.push({ dir: centre, h: 0.9 });
+  } else if (L.signature === 'archipel') {                  // îlots en spirale qui montent vers le ciel
+    let bas = 1.4, top = 0, d = centre;
+    for (let j = 0; j < 6; j++) {
+      d = autour(2.2 + j * 0.5, j * 1.1);
+      top = poser(T.ilot, d, { bas, echelle: 1.1, tourne: j * 1.1 });
+      bas = top + 1.3;
+    }
+    coins.push({ dir: d, h: top + 0.9 });
+  } else if (L.signature === 'anneau') {                    // cercle de colonnes autour d'un obélisque
+    let haut = 0, dCol = centre;
+    for (let j = 0; j < 10; j++) {
+      const d = autour(5.5, (j / 10) * Math.PI * 2), h = poser(j % 3 ? 'n_statue_column' : 'n_statue_columnDamaged', d, { echelle: 1.1, tourne: 0 });
+      if (h > haut) { haut = h; dCol = d; }
+    }
+    poser('n_statue_obelisk', centre, { echelle: 1.4 });
+    coins.push({ dir: dCol, h: haut + 0.9 });
+  } else if (L.signature === 'jardin') {                    // champ de fleurs géantes
+    for (let j = 0; j < 70; j++) poser(choix(['n_flower_redA', 'n_flower_yellowB', 'n_flower_purpleC', 'p_flowers-tall']), autour(Math.sqrt(r()) * 6.5, r() * 6.28), { echelle: 1.2 + r() * 1.3 });
+    coins.push({ dir: centre, h: 0.9 });
+  } else {                                                  // canyon : cercle de pitons rocheux, une seule entrée
+    for (let j = 1; j < 14; j++) poser(choix(['n_rock_tallB', 'n_rock_tallG', 'n_stone_tallC']), autour(6 + r() * 0.8, (j / 14) * Math.PI * 2), { echelle: 1.4 + r() * 0.6 });
+    coins.push({ dir: centre, h: 0.9 });
+  }
+
+  // 7. semis : fleurs, herbes, rochers isolés partout
   const nbSemis = Math.round(55 * surface);
   for (let n = 0; n < nbSemis; n++) {
     const dir = freeDir(0.08);
@@ -213,11 +274,11 @@ export function amenager(ctx) {
   const nbArbres = Math.round(8 * surface);
   for (let n = 0; n < nbArbres; n++) { const dir = freeDir(0.35); marquer(dir, 0.3); poser(choix(T.arbres), dir); }
 
-  // ---------- construction des InstancedMesh ----------
+  // ---------- construction des InstancedMesh, aux couleurs de la planète ----------
   for (const [id, mats] of lots) {
     for (const { geo, mat } of MODELES[id].morceaux) {
       const m = mat.clone();
-      if (T.feuillage && /leaf|leaves|feuill/i.test(mat.name || '')) m.color = new THREE.Color(T.feuillage);
+      recolorer(m, L, T);
       const im = new THREE.InstancedMesh(geo, allumable(m, U), mats.length);
       mats.forEach((x, i) => im.setMatrixAt(i, x));
       im.instanceMatrix.needsUpdate = true;

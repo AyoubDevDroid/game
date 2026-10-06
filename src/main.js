@@ -27,7 +27,7 @@ const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 1200);
 function resize() { renderer.setSize(innerWidth, innerHeight, false); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); }
 addEventListener('resize', resize); resize();
 
-scene.add(new THREE.HemisphereLight(0xffe2f4, 0x4a2f86, 1.35));
+const hemi = new THREE.HemisphereLight(0xffe2f4, 0x4a2f86, 1.35); scene.add(hemi);
 const sun = new THREE.DirectionalLight(0xfff0dc, 1.6); sun.position.set(30, 60, 25); scene.add(sun);
 const fill = new THREE.DirectionalLight(0xb48cff, 0.6); fill.position.set(-40, -20, -30); scene.add(fill);
 
@@ -100,6 +100,12 @@ function hud() {
   $('planeteNum').textContent = `Galaxie ${S.g + 1} · Planète ${S.i + 1} / ${NB_PLANETES}`;
   const got = planet.embers.filter(e => e.taken).length;
   $('braises').textContent = planet.lit ? '✓ phare rallumé' : `${got} / ${planet.embers.length}`;
+  const res = planet.ressources;
+  $('pillRessource').hidden = !(res && res.items.length);
+  if (res && res.items.length) {
+    $('ressourceIcone').textContent = planet.ressource.icone;
+    $('ressource').textContent = `${res.items.filter(x => x.pris).length} / ${res.items.length}`;
+  }
   const boss = ombrelles.boss();
   $('bossBarre').hidden = !boss;
   if (boss) $('bossVie').style.width = (100 * boss.vie / planet.bossVie) + '%';
@@ -146,13 +152,23 @@ function decharger() {
   planet = null; gardien = null;
 }
 
+// ciel et lumière aux couleurs de la planète (son humeur)
+function ambiancePlanete(L) {
+  const p = L.palette;
+  if (!p) { sky.couleurs(GALAXIES[L.g].ciel, L.g * 0.7); return; }
+  sky.couleurs(p.ciel, L.g * 0.7 + L.i * 0.4);
+  hemi.color.setHex(0xffffff).lerp(new THREE.Color(p.feuillage), 0.18);
+  hemi.groundColor.setHex(p.sol.bas).multiplyScalar(0.55);
+  sun.color.setHex(0xfff4e6).lerp(new THREE.Color(p.accent), 0.15);
+}
+
 // pose Fanal et la Luciole sur la planète (g, i) ; arrivee : la Luciole se pose en cinématique
 function charger(g, i, arrivee = false) {
   decharger();
   const L = planete(g, i), allume = phareAllume(save || nouvellePartie(), g, i);
   S.g = g; S.i = i;
-  sky.couleurs(GALAXIES[g].ciel, g * 0.7);
-  planet = createPlanet(scene, glow, modeles, L, allume);
+  ambiancePlanete(L);
+  planet = createPlanet(scene, glow, modeles, L, allume, (save && save.ramasse[cle(g, i)]) || []);
   if (!allume) ombrelles.peupler(planet);
   gardien = !allume && L.gardien ? createGardien(glow, planet, L.gardien) : null;
   // la Luciole est garée en haut de la planète
@@ -187,7 +203,7 @@ const pretAEmbarquer = () => planet && S.pos.distanceTo(posVaisseau) < PORTEE_VA
 const cosmos = createCosmos({
   scene, glow, camera, canvas, sky, vaisseau,
   onArrivee: (g, i) => { cosmos.fermer(); charger(g, i, true); },
-  onFermer: () => { cosmos.fermer(); sky.couleurs(GALAXIES[S.g].ciel, S.g * 0.7); garerVaisseau(); atterrir(); },
+  onFermer: () => { cosmos.fermer(); ambiancePlanete(planet); garerVaisseau(); atterrir(); },
 });
 
 // Fanal monte à bord, la Luciole décolle, puis l'univers s'ouvre
@@ -395,6 +411,23 @@ function updateGame(dt) {
       hud();
     }
   }
+
+  // la ressource de la planète, en traînées
+  const res = P.ressources;
+  if (res && res.items.length) {
+    for (const it of res.items) {
+      if (it.pris || chest.distanceTo(it.pos) > 1.25) continue;
+      it.pris = true; S.serie = S.serieT > 0 ? S.serie + 1 : 0; S.serieT = 0.8;
+      const nom = P.ressource.nom;
+      (save.ramasse[cle(S.g, S.i)] ||= []).push(it.n);
+      save.ressources[nom] = (save.ressources[nom] || 0) + 1;
+      sfx.piece(S.serie); burst(it.pos, 10, P.palette.accent, 3);
+      if (res.items.every(x => x.pris)) { sfx.ready(); message(`${P.ressource.icone} ${nom} : tout ramassé !`, 'Planète entièrement explorée', 2400); }
+      S.aSauver = true; hud();
+    }
+  }
+  S.serieT = Math.max(0, (S.serieT || 0) - dt);
+  if (S.aSauver && S.serieT <= 0) { S.aSauver = false; sauver(save); }
 
   // rallumer le phare
   if (P.beacon.ready && !P.lit && chest.distanceTo(P.beacon.pos) < P.beacon.portee + (P.boss ? 1.5 : 0)) {

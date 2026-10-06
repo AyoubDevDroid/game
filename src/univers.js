@@ -59,25 +59,82 @@ const FIN = ['lune', 'ne', 'lle', 'ria', 'don', 'mine', 'sia', 'tte', 'ra', 'bru
 // couleurs des petits gardiens à libérer : [cadre, écharpe]
 const GARDIENS = [[0x3fa0ff, 0xffd23f], [0x3ee6a8, 0xff3d81], [0xb44dff, 0xa7f432], [0xff7a00, 0x00d2ff], [0xffd23f, 0xb44dff], [0x2fd3c4, 0xff7a00]];
 
-const decale = (hex, dh) => { const c = new THREE.Color(hex), h = {}; c.getHSL(h); return c.setHSL((h.h + dh + 1) % 1, h.s, h.l).getHex(); };
+// ---------- l'identité de chaque planète : humeur, palette, relief, signature, ressource ----------
+// humeur : saturation et clarté des couleurs, style du ciel, particules qui flottent dans l'air
+export const HUMEURS = [
+  { nom: 'bonbon', s: 0.8, l: 0.68, ciel: [0.82, 0.62, 0.32], particules: 'bulles', emissif: 0.08 },
+  { nom: 'néon', s: 1, l: 0.55, ciel: [0.5, 0.25, 0.07], particules: 'lucioles', emissif: 0.35 },
+  { nom: 'tropical', s: 0.95, l: 0.56, ciel: [0.8, 0.55, 0.3], particules: 'pollen', emissif: 0.1 },
+  { nom: 'crépuscule', s: 0.85, l: 0.52, ciel: [0.65, 0.4, 0.12], particules: 'braises', emissif: 0.15 },
+  { nom: 'givré', s: 0.6, l: 0.74, ciel: [0.85, 0.6, 0.28], particules: 'neige', emissif: 0.05 },
+  { nom: 'féérique', s: 0.9, l: 0.62, ciel: [0.7, 0.42, 0.14], particules: 'etoiles', emissif: 0.2 },
+];
+export const FORMES_RELIEF = ['doux', 'terrasses', 'pics', 'dunes'];
+// élément marquant de la planète (amenagement.js)
+export const SIGNATURES = ['geants', 'cristaux', 'archipel', 'anneau', 'jardin', 'canyon'];
+// la ressource à collecter sur la planète (en traînées, comme des pièces)
+export const RESSOURCES = [
+  { nom: 'Pétales', icone: '🌸', forme: 'fleur' }, { nom: 'Rubis', icone: '💎', forme: 'gemme' },
+  { nom: 'Poussière d\'étoile', icone: '⭐', forme: 'etoile' }, { nom: 'Perles', icone: '🫧', forme: 'perle' },
+  { nom: 'Cœurs de lune', icone: '💗', forme: 'coeur' }, { nom: 'Glands d\'or', icone: '🌰', forme: 'gland' },
+  { nom: 'Cristaux chantants', icone: '🔷', forme: 'cristal' }, { nom: 'Anneaux d\'aurore', icone: '💫', forme: 'anneau' },
+];
+
+const hsl = (h, s, l) => new THREE.Color().setHSL(((h % 1) + 1) % 1, Math.min(1, s), Math.min(0.92, l)).getHex();
+const teinteDe = hex => { const o = {}; new THREE.Color(hex).getHSL(o); return o.h; };
+
+// toutes les couleurs d'une planète, à partir de sa teinte principale H et de son humeur
+function palette(H, hu, r, galaxieCiel) {
+  const { s, l } = hu, sens = r() < 0.5 ? 1 : -1;
+  const A = H + sens * (0.28 + r() * 0.12), B = H - sens * (0.42 + r() * 0.1);   // teintes d'accent (complémentaires)
+  const ciel = hu.ciel.map((cl, k) => {
+    const c = new THREE.Color(hsl(H + 0.5 + k * 0.07 * sens, 0.75, cl));
+    return c.lerp(new THREE.Color(galaxieCiel[k]), 0.3).getHex();               // le ciel garde un peu la couleur de la galaxie
+  });
+  return {
+    sol: { bas: hsl(H, s, l - 0.14), base: hsl(H, s, l), haut: hsl(H + 0.03, s * 0.9, l + 0.12), bosse: hsl(A, s, l + 0.05) },
+    herbe: hsl(H + 0.02, s, l - 0.2),
+    feuillage: hsl(A, s, l - 0.04), feuillage2: hsl(A + 0.08 * sens, s, l - 0.14), feuillageAutomne: hsl(B, s, l),
+    bois: hsl(0.06 + r() * 0.04, 0.55, 0.42), boisClair: hsl(0.08, 0.5, 0.7),
+    pierre: hsl(H + 0.5, 0.3, 0.72), pierreSombre: hsl(H + 0.5, 0.28, 0.55), terre: hsl(B, 0.5, 0.5),
+    cristal: hsl(B, 1, 0.62), fleurs: [hsl(B, 1, 0.62), hsl(A + 0.15, 1, 0.6), hsl(B + 0.12, 0.9, 0.7)],
+    accent: hsl(B, 1, 0.6), motif: hsl(B + 0.05, 1, 0.65),
+    ciel,
+  };
+}
+
+// les 14 planètes d'une galaxie passent par tous les biomes avant d'en répéter un
+function ordreBiomes(g) {
+  const r = rng(77 + g * 13), ordre = BIOMES.map((_, k) => k);
+  for (let k = ordre.length - 1; k > 0; k--) { const j = Math.floor(r() * (k + 1)); [ordre[k], ordre[j]] = [ordre[j], ordre[k]]; }
+  if (g === 0) { ordre.splice(ordre.indexOf(0), 1); ordre.splice(ordre.indexOf(1), 1); ordre.unshift(0, 1); }   // Brumelune, Cendrine
+  return ordre;
+}
 
 // une planète : g (0 à 14), i (0 à 14)
 export function planete(g, i) {
   const seed = 1000 + g * 37 + i * 11, r = rng(seed);
   const boss = i === NB_PLANETES - 1;
-  const biome = BIOMES[g === 0 && i < 2 ? i : (g * 3 + i * 7) % BIOMES.length];
-  const teinte = g === 0 ? 0 : (r() - 0.5) * 0.08;      // petites variations de couleur d'une galaxie à l'autre
-  const sol = Object.fromEntries(Object.entries(biome.sol).map(([k, v]) => [k, decale(v, teinte)]));
-  const nom = boss ? 'Le Grand Phare'
-    : g === 0 && i === 0 ? 'Brumelune' : g === 0 && i === 1 ? 'Cendrine'
-    : DEBUT[Math.floor(r() * DEBUT.length)] + (r() < 0.5 ? MILIEU[Math.floor(r() * MILIEU.length)] : '') + FIN[Math.floor(r() * FIN.length)];
+  const biome = BIOMES[ordreBiomes(g)[i % BIOMES.length]];
+  const hu = HUMEURS[g === 0 && i === 0 ? 2 : Math.floor(r() * HUMEURS.length)];
+  // teinte principale : celle du biome, décalée librement (une planète de lave peut être rose ou violette)
+  const H = teinteDe(biome.sol.base) + (g === 0 && i < 2 ? 0 : (r() - 0.5) * 0.36);
+  const pal = palette(H, hu, r, GALAXIES[g].ciel);
+  const sol = pal.sol;
+  const forme = boss ? 'doux' : FORMES_RELIEF[g === 0 && i === 0 ? 0 : Math.floor(r() * FORMES_RELIEF.length)];
+  const signature = SIGNATURES[(i + g * 2 + Math.floor(r() * 3)) % SIGNATURES.length];
+  const ressource = RESSOURCES[(i * 3 + g) % RESSOURCES.length];
+  const tirer = () => DEBUT[Math.floor(r() * DEBUT.length)] + (r() < 0.5 ? MILIEU[Math.floor(r() * MILIEU.length)] : '') + FIN[Math.floor(r() * FIN.length)];
+  let nom = boss ? 'Le Grand Phare' : g === 0 && i === 0 ? 'Brumelune' : g === 0 && i === 1 ? 'Cendrine' : tirer();
+  while (/vermin|merd|pute|cul|con[en]|nul/i.test(nom)) nom = tirer();   // pas de nom malheureux
   const radius = boss ? 13 : Math.round(15 + r() * 7 + g * 0.3);
   const dir = () => { const u = r() * 2 - 1, a = r() * Math.PI * 2, s = Math.sqrt(1 - u * u); return [s * Math.cos(a), u, s * Math.sin(a)]; };
   let beacon = dir();
   while (beacon[1] > 0.2) beacon = dir();                 // le phare n'est jamais juste à côté du vaisseau
   return {
     g, i, seed, nom, boss, radius, biome: biome.nom,
-    sol, motif: biome.motif, motifCol: biome.motifCol, scale: biome.scale, herbe: decale(biome.herbe, teinte), decors: biome.decors,
+    sol, motif: biome.motif, motifCol: pal.motif, scale: biome.scale, herbe: pal.herbe, decors: biome.decors,
+    palette: pal, humeur: hu, forme, signature, ressource,
     beacon, relief: 0.5 + r() * 0.5, freq: 1 + r() * 0.6, bosse: { h: 1.2 + r() * 1.2, w: 0.25 + r() * 0.12 },
     embers: boss ? 4 : 7 + Math.floor(r() * 4) + Math.floor(g / 4),
     ombrelles: boss ? 2 + Math.floor(g / 3) : Math.min(12, 2 + Math.floor(radius / 6) + Math.floor(g * 0.6)),
@@ -92,10 +149,10 @@ export function planete(g, i) {
 // ---------- sauvegarde ----------
 const CLE = 'astres_eteints_v2';
 export function lireSauvegarde() {
-  try { const s = JSON.parse(localStorage.getItem(CLE)); if (s && s.allumes) return s; } catch {}
+  try { const s = JSON.parse(localStorage.getItem(CLE)); if (s && s.allumes) return { ressources: {}, ramasse: {}, ...s }; } catch {}
   return null;
 }
-export function nouvellePartie() { return { galaxie: 0, debloquee: 0, allumes: {}, gardiens: 0, eclats: 0, temps: 0 }; }
+export function nouvellePartie() { return { galaxie: 0, debloquee: 0, allumes: {}, gardiens: 0, eclats: 0, temps: 0, ressources: {}, ramasse: {} }; }
 export function sauver(s) { try { localStorage.setItem(CLE, JSON.stringify(s)); } catch {} }
 export const cle = (g, i) => `${g}-${i}`;
 export function phareAllume(s, g, i) { return !!s.allumes[cle(g, i)]; }

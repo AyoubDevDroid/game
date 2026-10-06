@@ -101,9 +101,44 @@ const degradeFaisceau = (() => {
   return new THREE.CanvasTexture(c);
 })();
 
+// ---------- formes des ressources à collecter (dessinées par le code, partagées) ----------
+const M0 = new THREE.Matrix4(), Q0 = new THREE.Quaternion(), Q1 = new THREE.Quaternion(), V0 = new THREE.Vector3(), S0 = new THREE.Vector3();
+const FORMES = {};
+function extrude(shape, ep = 0.12) {
+  const g = new THREE.ExtrudeGeometry(shape, { depth: ep, bevelEnabled: true, bevelThickness: 0.04, bevelSize: 0.04, bevelSegments: 2, curveSegments: 10 });
+  g.center(); return g;
+}
+function formeRessource(nom) {
+  if (FORMES[nom]) return FORMES[nom];
+  let g;
+  if (nom === 'fleur') {
+    const parts = [new THREE.SphereGeometry(0.11, 10, 8)];
+    for (let k = 0; k < 5; k++) { const a = (k / 5) * Math.PI * 2, p = new THREE.SphereGeometry(0.12, 10, 8); p.scale(1, 1, 0.5); p.translate(Math.cos(a) * 0.17, Math.sin(a) * 0.17, 0); parts.push(p); }
+    g = mergeGeometries(parts.map(p => { p.deleteAttribute('uv'); return p; }));
+  } else if (nom === 'gemme') { g = new THREE.OctahedronGeometry(0.26); g.scale(1, 1.35, 1); }
+  else if (nom === 'etoile') {
+    const s = new THREE.Shape();
+    for (let k = 0; k < 10; k++) { const a = Math.PI / 2 + k * Math.PI / 5, rr = k % 2 ? 0.12 : 0.28; k ? s.lineTo(Math.cos(a) * rr, Math.sin(a) * rr) : s.moveTo(Math.cos(a) * rr, Math.sin(a) * rr); }
+    g = extrude(s);
+  } else if (nom === 'coeur') {
+    const s = new THREE.Shape(); s.moveTo(0, -0.24);
+    s.bezierCurveTo(-0.34, -0.02, -0.26, 0.26, 0, 0.12); s.bezierCurveTo(0.26, 0.26, 0.34, -0.02, 0, -0.24);
+    g = extrude(s);
+  } else if (nom === 'perle') g = new THREE.SphereGeometry(0.2, 16, 12);
+  else if (nom === 'gland') {
+    const a = new THREE.SphereGeometry(0.17, 12, 10); a.scale(1, 1.25, 1);
+    const b = new THREE.SphereGeometry(0.19, 12, 6, 0, Math.PI * 2, 0, Math.PI / 2); b.translate(0, 0.06, 0);
+    g = mergeGeometries([a, b]);
+  } else if (nom === 'cristal') { g = new THREE.OctahedronGeometry(0.2); g.scale(0.8, 2, 0.8); }
+  else g = new THREE.TorusGeometry(0.2, 0.065, 10, 24);
+  g.translate(0, 0, 0);
+  return (FORMES[nom] = g);
+}
+
 // ---------- une planète (centrée à l'origine) ----------
 // L : description venant de univers.js ; allume : le phare est déjà rallumé (planète revisitée)
-export function createPlanet(scene, glow, modeles, L, allume = false) {
+// ramasses : numéros des ressources déjà prises sur cette planète (sauvegarde)
+export function createPlanet(scene, glow, modeles, L, allume = false, ramasses = []) {
   const r = rng(L.seed);
   const center = new THREE.Vector3();
   const bDir = new THREE.Vector3(...L.beacon).normalize();
@@ -115,11 +150,18 @@ export function createPlanet(scene, glow, modeles, L, allume = false) {
   // relief : collines douces + butte sous le phare
   const seedV = new THREE.Vector3(L.seed * 0.017, L.seed * 0.023, L.seed * 0.009);
   const freq = L.freq * L.radius / 9;            // les collines gardent la même taille sur une grande planète
+  // forme du relief : doux (collines), terrasses (marches), pics (crêtes), dunes (vagues)
+  const axeDunes = new THREE.Vector3(L.seed % 7 - 3, 2, L.seed % 5 - 2).normalize();
   const hauteur = d => {
     const p = d.clone().multiplyScalar(freq * 2).add(seedV);
     const n = bruit(p.x, p.y, p.z) * 0.65 + bruit(p.x * 2.3, p.y * 2.3, p.z * 2.3) * 0.35 - 0.5;
+    let h;
+    if (L.forme === 'terrasses') { const b = L.relief * 3.4 * n, pas = 0.8, q = Math.round(b / pas) * pas; h = q + (b - q) * 0.22; }
+    else if (L.forme === 'pics') h = L.relief * 2.6 * (Math.pow(1 - Math.abs(n * 2), 3) - 0.35);
+    else if (L.forme === 'dunes') h = L.relief * (Math.sin(d.dot(axeDunes) * L.radius * 0.55 + n * 4) * 0.9 + n);
+    else h = L.relief * 2 * n;
     const a = d.angleTo(bDir);
-    return L.relief * 2 * n + L.bosse.h * Math.exp(-((a / (L.bosse.w * k)) ** 2));
+    return h + L.bosse.h * Math.exp(-((a / (L.bosse.w * k)) ** 2));
   };
   planet.surface = d => L.radius + hauteur(d);
   planet.surfacePoint = d => center.clone().addScaledVector(d, planet.surface(d));
@@ -260,6 +302,53 @@ export function createPlanet(scene, glow, modeles, L, allume = false) {
   }
   }
 
+  // ---- la ressource de la planète : des traînées à suivre, comme des pièces (et par-dessus les rochers) ----
+  const res = { items: [], mesh: null };
+  if (L.ressource && !L.boss) {
+    const pos = [];
+    const nbTrainees = 4 + Math.floor(L.radius / 6);
+    for (let t = 0; t < nbTrainees; t++) {
+      const a = freeDir(0.3);
+      const axe = randomDir(r).cross(a).normalize();                       // la traînée suit un arc de grand cercle
+      const nb = 6 + Math.floor(r() * 4), pas = 1.9 / L.radius;
+      for (let j = 0; j < nb; j++) {
+        const d = a.clone().applyAxisAngle(axe, j * pas);
+        if (d.angleTo(Y) < 3 / L.radius || d.angleTo(bDir) < 2 / L.radius) continue;
+        let h = 0.9;                                                         // au-dessus d'un rocher ? on passe par-dessus
+        for (const s of planet.solides) {
+          if (s.bas > 0.5 || s.haut > 4) continue;
+          if (d.angleTo(s.dir) * L.radius < s.radius + 0.3) h = Math.max(h, s.haut + 0.8);
+        }
+        pos.push({ dir: d, h });
+      }
+    }
+    res.items = pos.map((p, n) => ({ ...p, n, pris: ramasses.includes(n), phase: r() * 6,
+      pos: planet.surfacePoint(p.dir).addScaledVector(p.dir, p.h) }));
+    const mat = new THREE.MeshStandardMaterial({ color: L.palette.accent, emissive: L.palette.accent, emissiveIntensity: 0.45, roughness: 0.3, metalness: 0.2 });
+    res.mesh = new THREE.InstancedMesh(formeRessource(L.ressource.forme), mat, res.items.length);
+    res.mesh.frustumCulled = false; res.mesh.userData.partage = true;   // forme partagée entre les planètes
+    planet.group.add(res.mesh);
+  }
+  planet.ressources = res;
+
+  // ---- particules d'ambiance (selon l'humeur) : lucioles, pollen, bulles, braises, neige, étoiles ----
+  const type = L.biome === 'givre' ? 'neige' : (L.biome === 'lave' || L.biome === 'volcan') ? 'braises' : L.humeur ? L.humeur.particules : 'pollen';
+  const NP = type === 'neige' ? 220 : 140, ppos = new Float32Array(NP * 3), pcol = new Float32Array(NP * 3);
+  const couleurP = new THREE.Color(type === 'neige' ? 0xffffff : type === 'braises' ? 0xffa040 : L.palette ? L.palette.accent : 0xffffff);
+  const parts = [];
+  for (let i = 0; i < NP; i++) {
+    const d = randomDir(r);
+    parts.push({ d, s: planet.surface(d), h: r() * 7, v: 0.4 + r() * 0.8, ph: r() * 6 });
+    const c = couleurP.clone().lerp(new THREE.Color(0xffffff), r() * 0.4);
+    pcol.set([c.r, c.g, c.b], i * 3);
+  }
+  const pgeo = new THREE.BufferGeometry();
+  pgeo.setAttribute('position', new THREE.BufferAttribute(ppos, 3)); pgeo.setAttribute('color', new THREE.BufferAttribute(pcol, 3));
+  const points = new THREE.Points(pgeo, new THREE.PointsMaterial({ size: type === 'bulles' ? 0.55 : type === 'neige' ? 0.3 : 0.38, map: glow, vertexColors: true, transparent: true, opacity: 0.9, depthWrite: false, blending: THREE.AdditiveBlending }));
+  points.frustumCulled = false;
+  planet.group.add(points);
+  planet.ambiance = { type, parts, ppos, pgeo };
+
   // ---- brume des planètes éteintes ----
   planet.brume = [];
   for (let i = 0; i < 9; i++) {
@@ -292,6 +381,30 @@ export function createPlanet(scene, glow, modeles, L, allume = false) {
 
 // Animation de la planète (appelée à chaque image)
 export function animatePlanet(p, dt, clock) {
+  // ressources : elles tournent et flottent ; celles qu'on a prises disparaissent
+  const res = p.ressources;
+  if (res && res.mesh) {
+    res.items.forEach((it, i) => {
+      if (it.pris) { M0.makeScale(0, 0, 0); res.mesh.setMatrixAt(i, M0); return; }
+      Q0.setFromUnitVectors(Y, it.dir).multiply(Q1.setFromAxisAngle(Y, clock * 2.2 + it.phase));
+      V0.copy(it.pos).addScaledVector(it.dir, Math.sin(clock * 3 + it.phase) * 0.12);
+      res.mesh.setMatrixAt(i, M0.compose(V0, Q0, S0.set(1, 1, 1)));
+    });
+    res.mesh.instanceMatrix.needsUpdate = true;
+  }
+  // particules d'ambiance
+  const am = p.ambiance;
+  if (am) {
+    am.parts.forEach((q, i) => {
+      if (am.type === 'neige') { q.h -= q.v * dt * 1.2; if (q.h < 0) q.h = 7; }
+      else if (am.type === 'braises' || am.type === 'bulles') { q.h += q.v * dt * (am.type === 'bulles' ? 0.6 : 1.4); if (q.h > 7) q.h = 0; }
+      const w = Math.sin(clock * q.v + q.ph) * 0.4;
+      V0.copy(q.d).multiplyScalar(q.s + 0.3 + q.h + (am.type === 'lucioles' || am.type === 'etoiles' ? w : 0));
+      if (am.type !== 'etoiles') V0.x += w * 0.6, V0.z += Math.cos(clock * q.v * 0.8 + q.ph) * 0.5;
+      am.ppos.set([V0.x, V0.y, V0.z], i * 3);
+    });
+    am.pgeo.attributes.position.needsUpdate = true;
+  }
   for (const e of p.embers) {
     if (e.taken) continue;
     e.inner.position.y = Math.sin(clock * 2.5 + e.phase) * 0.15;

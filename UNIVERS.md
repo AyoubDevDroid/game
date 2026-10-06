@@ -45,6 +45,7 @@ Planche de référence : [`docs/style/planche.png`](docs/style/planche.png). **C
 - **Saut**, et passage d'une planète à l'autre par les tremplins d'aurore.
 - **Collecte** : braises, puis phare à rallumer.
 - **Double saut** : un deuxième appui en l'air, avec une pirouette.
+- **Chaque planète a son identité** (univers.js) : une **humeur** (bonbon, néon, tropical, crépuscule, givré, féérique) qui règle le ciel, la saturation et les particules dans l'air (bulles, lucioles, pollen, braises, neige, étoiles) ; une **palette** vive tirée de sa teinte, appliquée au sol et aux objets ; un **relief** (doux, terrasses, pics, dunes) ; un **élément signature** (champignons géants, forêt de cristaux, archipel d'îlots en spirale, cercle de colonnes, jardin de fleurs géantes, canyon) ; et sa **ressource** à collecter en traînées (pétales, rubis, poussière d'étoile, perles, cœurs de lune, glands d'or, cristaux chantants, anneaux d'aurore), gardée pour la future boutique.
 - **Ombrelles** : petites ombres coiffées d'une ombrelle violette. Elles errent, repèrent Fanal (leurs yeux virent au rose) et le poursuivent, un peu moins vite que lui. Si elles le touchent, elles soufflent une braise, qui retourne à sa place. On les chasse en leur sautant dessus (Fanal rebondit), et la vague de couleur du phare rallumé les dissout. Brumelune 2, Cendrine 4, Grand Phare 3.
 - **Plus tard** : attaque de lumière, boss de fin d'archipel, pièces/cosmétiques.
 

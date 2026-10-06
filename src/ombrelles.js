@@ -97,10 +97,18 @@ export function createOmbrelles(scene) {
   }
 
   // avance sur la sphère dans la direction du cap
+  const ecart = new THREE.Vector3();
   function avancer(o, vitesse, dt) {
     o.dir.addScaledVector(o.cap, vitesse * dt / o.P.radius).normalize();
-    const b = o.P.beacon.dir;                            // le phare : on le contourne
-    if (o.dir.angleTo(b) < (o.P.boss ? 2 : 1.2) / o.P.radius) o.dir.addScaledVector(projectOnPlane(o.dir.clone().sub(b), o.dir).normalize(), 0.02).normalize();
+    // rochers, troncs, blocs, cage, Luciole : l'Ombrelle glisse le long au lieu de les traverser
+    const R = o.P.radius, moi = 0.45 * o.taille;
+    const bloque = (dir, rayon) => {
+      ecart.copy(o.dir).sub(dir); projectOnPlane(ecart, dir);
+      const d = ecart.length() * R, min = rayon + moi;
+      if (d < min && d > 1e-5) o.dir.addScaledVector(ecart.normalize(), (min - d) / R).normalize();
+    };
+    for (const s of o.P.solides || []) if (s.bas < 1 && s.haut > 0.5) bloque(s.dir, s.radius);
+    for (const s of o.P.obstacles) bloque(s.dir, s.radius);
   }
 
   // joueur : { pos, up, vel, actif } — renvoie la liste des évènements de l'image

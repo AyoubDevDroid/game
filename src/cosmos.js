@@ -129,6 +129,7 @@ export function createCosmos({ scene, glow, camera, canvas, sky, vaisseau, onArr
     if (!a.ouverte) etat = L.boss ? `Rallume ${BOSS_REQUIS} phares de la galaxie pour l'atteindre (${n} / ${BOSS_REQUIS})` : 'Rallume d\'autres phares pour l\'ouvrir';
     else if (a.allume) etat = L.boss ? 'Grand Phare rallumé ✓' : 'Phare rallumé ✓ · gardien libéré';
     else etat = L.boss ? 'Gardée par la Grande Ombrelle 👑' : `${L.embers} braises · un gardien prisonnier · ${L.ombrelles} Ombrelles`;
+    if (!L.boss) etat += `<br>${L.ressource.icone} ${L.ressource.nom} · ambiance ${L.humeur.nom}`;
     f.innerHTML = `<b>${L.nom}</b><span>${etat}</span>`;
     if (a.ouverte) {
       const go = document.createElement('button');
