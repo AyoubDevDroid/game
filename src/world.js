@@ -35,14 +35,19 @@ export function makeGlowTexture() {
 // renvoie le groupe du ciel (il suit la caméra) ; ciel.couleurs([bas, milieu, haut]) change d'ambiance
 export function createSky(scene, glow) {
   const sky = new THREE.Group();
-  const U = { cBas: { value: new THREE.Color(0xff70ae) }, cMilieu: { value: new THREE.Color(0x5c2bc7) }, cHaut: { value: new THREE.Color(0x1c0d4f) } };
+  const U = { cBas: { value: new THREE.Color(0xff70ae) }, cMilieu: { value: new THREE.Color(0x5c2bc7) }, cHaut: { value: new THREE.Color(0x1c0d4f) },
+    uUp: { value: new THREE.Vector3(0, 1, 0) }, uJour: { value: 0 }, uSoleil: { value: new THREE.Vector3(30, 60, 25).normalize() } };
   const fond = new THREE.Mesh(new THREE.SphereGeometry(700, 32, 16), new THREE.ShaderMaterial({
     side: THREE.BackSide, depthWrite: false, uniforms: U,
     vertexShader: 'varying vec3 vD; void main(){ vD = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
-    fragmentShader: `uniform vec3 cBas, cMilieu, cHaut; varying vec3 vD; void main(){
-      float t = vD.y * 0.5 + 0.5;
+    fragmentShader: `uniform vec3 cBas, cMilieu, cHaut, uUp, uSoleil; uniform float uJour; varying vec3 vD; void main(){
+      float t = dot(normalize(vD), uUp) * 0.5 + 0.5;          // l'horizon suit Fanal, où qu'il soit sur la planète
       vec3 c = mix(cBas, cMilieu, smoothstep(0.0, 0.5, t)); c = mix(c, cHaut, smoothstep(0.5, 1.0, t));
-      gl_FragColor = vec4(c, 1.0); }`,
+      // le jour : ciel bleu lumineux, horizon clair, soleil chaud
+      vec3 j = mix(vec3(0.74, 0.9, 1.0), vec3(0.33, 0.64, 0.98), smoothstep(0.44, 0.56, t)); j = mix(j, vec3(0.1, 0.38, 0.86), smoothstep(0.56, 0.9, t));
+      float s = max(dot(normalize(vD), uSoleil), 0.0);
+      j += vec3(1.0, 0.88, 0.6) * (pow(s, 600.0) * 1.5 + pow(s, 10.0) * 0.22);
+      gl_FragColor = vec4(mix(c, j, uJour), 1.0); }`,
   }));
   fond.frustumCulled = false; fond.renderOrder = -2;
   sky.add(fond);
@@ -84,7 +89,30 @@ export function createSky(scene, glow) {
   const gal = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(gc), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0.85 }));
   gal.position.set(1, 0.35, -0.6).normalize().multiplyScalar(450); gal.scale.setScalar(260); gal.material.rotation = 0.4;
   sky.add(gal);
+  // nuages de beau temps (visibles le jour)
+  const nc = document.createElement('canvas'); nc.width = 256; nc.height = 128; const nx = nc.getContext('2d');
+  for (const [x, y, rr] of [[70, 82, 38], [118, 62, 52], [170, 78, 40], [200, 92, 26], [40, 96, 22], [128, 96, 40]]) {
+    const gr = nx.createRadialGradient(x, y - rr * 0.3, rr * 0.2, x, y, rr);
+    gr.addColorStop(0, '#ffffff'); gr.addColorStop(0.8, '#f4f8ff'); gr.addColorStop(1, 'rgba(225,235,255,0)');
+    nx.fillStyle = gr; nx.beginPath(); nx.arc(x, y, rr, 0, 7); nx.fill();
+  }
+  const nuageTex = new THREE.CanvasTexture(nc); nuageTex.colorSpace = THREE.SRGBColorSpace;
+  const nuages = [];
+  for (let i = 0; i < 42; i++) {
+    const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: nuageTex, transparent: true, depthWrite: false, opacity: 0, fog: false }));
+    s.position.copy(randomDir(r).multiplyScalar(330)); const t = 70 + r() * 70; s.scale.set(t, t * 0.5, 1);
+    sky.add(s); nuages.push(s);
+  }
+  const lointains = sky.children.filter(o => o !== fond && !nuages.includes(o));   // étoiles, galaxie
+  lointains.forEach(o => { o.userData.op = o.material.opacity; });
   scene.add(sky);
+
+  // jour : 0 la nuit de l'espace, 1 grand beau temps ; up : la verticale de Fanal
+  sky.jour = (jour, up) => {
+    U.uJour.value = jour; if (up) U.uUp.value.copy(up);
+    for (const o of lointains) o.material.opacity = o.userData.op * (1 - jour * 0.95);
+    for (const s of nuages) s.material.opacity = Math.max(0, jour * 1.15 - 0.15);
+  };
 
   sky.couleurs = ([bas, milieu, haut], rot = 0) => {
     U.cBas.value.setHex(bas); U.cMilieu.value.setHex(milieu); U.cHaut.value.setHex(haut);
@@ -216,6 +244,59 @@ export function createPlanet(scene, glow, modeles, L, allume = false, ramasses =
   geo.computeVertexNormals();
   const groundMat = allumable(new THREE.MeshLambertMaterial({ vertexColors: true, emissive: 0x000000 }), U, { motif: L.motif, motifCol: L.motifCol, scale: (L.scale || 6) / k, tex: TEXTURES['sol-' + L.biome.normalize('NFD').replace(/[̀-ͯ]/g, '')] || TEXTURES['sol-tous'] });
   planet.group.add(new THREE.Mesh(geo, groundMat));
+
+
+  // ---- herbe épaisse qui ondule au vent (un seul appel de dessin pour des milliers de brins) ----
+  U.uTemps = { value: 0 };
+  const rh = rng(L.seed * 3 + 1);                // son propre hasard : ne décale pas le reste de la planète
+  if (L.motif === 1 || ['marais', 'pirate', 'hantee', 'gourmande', 'nuages'].includes(L.biome)) {
+    const brin = new THREE.BufferGeometry(), seg = 3, pos = [], cols = [], nor = [], idx = [];
+    for (let j = 0; j <= seg; j++) {
+      const t = j / seg, l = 0.045 * (1 - t) + 0.003, courbe = t * t * 0.18;
+      pos.push(-l, t, courbe, l, t, courbe);
+      const c = 0.55 + t * 0.7; cols.push(c, c, c, c, c, c);
+      nor.push(0, 1, 0, 0, 1, 0);                              // éclairé comme le sol, quel que soit le côté
+      if (j < seg) { const a = j * 2; idx.push(a, a + 1, a + 2, a + 1, a + 3, a + 2); }
+    }
+    brin.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    brin.setAttribute('color', new THREE.Float32BufferAttribute(cols, 3));
+    brin.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3));
+    brin.setIndex(idx);
+    const herbeCol = new THREE.Color(L.herbe || 0x2aa77a).lerp(new THREE.Color(L.sol.base), 0.6);
+    const mat = allumable(new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide }), U);
+    const avant = mat.onBeforeCompile;
+    mat.onBeforeCompile = (sh, rd) => {
+      avant(sh, rd);
+      sh.vertexShader = sh.vertexShader
+        .replace('#include <common>', '#include <common>\nuniform float uTemps;')
+        .replace('#include <begin_vertex>', `#include <begin_vertex>
+#ifdef USE_INSTANCING
+  vec3 ip = instanceMatrix[3].xyz;
+  float vent = sin(uTemps * 2.1 + dot(ip, vec3(0.55, 0.4, 0.5))) * 0.22 + sin(uTemps * 5.3 + ip.y * 3.0) * 0.05;
+  transformed.x += vent * position.y * position.y;
+  transformed.z += vent * 0.6 * position.y * position.y;
+#endif`);
+    };
+    const touffes = Math.min(2600, Math.round(1300 / (k * k))), parTouffe = 7;
+    const herbe = new THREE.InstancedMesh(brin, mat, touffes * parTouffe);
+    const m = new THREE.Matrix4(), q = new THREE.Quaternion(), qy = new THREE.Quaternion(), sc = new THREE.Vector3(), c = new THREE.Color();
+    let n = 0;
+    for (let t = 0; t < touffes; t++) {
+      const d0 = randomDir(rh);
+      if (L.mer && planet.surface(d0) < L.radius + L.mer + 0.05) continue;        // pas d'herbe sous l'eau
+      const teinte = 0.85 + rh() * 0.3;
+      for (let b = 0; b < parTouffe; b++) {
+        const d = d0.clone().addScaledVector(randomDir(rh), 0.35 / L.radius).normalize();
+        q.setFromUnitVectors(Y, d).multiply(qy.setFromAxisAngle(Y, rh() * Math.PI * 2));
+        const h = 0.25 + rh() * 0.3;
+        m.compose(planet.surfacePoint(d).addScaledVector(d, -0.03), q, sc.set(1 + rh() * 0.5, h, 1));
+        herbe.setMatrixAt(n, m); herbe.setColorAt(n, c.copy(herbeCol).multiplyScalar(teinte)); n++;
+      }
+    }
+    herbe.count = n; herbe.instanceMatrix.needsUpdate = true; if (herbe.instanceColor) herbe.instanceColor.needsUpdate = true;
+    herbe.computeBoundingSphere();
+    planet.group.add(herbe);
+  }
 
   const placeOn = (obj, dir, h = 0) => { obj.position.copy(planet.surfacePoint(dir)).addScaledVector(dir, h); obj.quaternion.setFromUnitVectors(Y, dir); };
   planet.placeOn = placeOn;
@@ -502,6 +583,7 @@ export function animatePlanet(p, dt, clock) {
     c.g.attributes.position.needsUpdate = true;
   }
   if (p.eau) p.eau.rotation.y += dt * 0.02;
+  if (p.U.uTemps) p.U.uTemps.value = clock;
   animerParcours(p, dt, clock);
   // ressources : elles tournent et flottent ; celles qu'on a prises disparaissent
   const res = p.ressources;

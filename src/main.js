@@ -43,6 +43,31 @@ await Promise.all([chargerDecors(), chargerFaune()]);   // objets 3D et animaux 
 enregistrerDecors(modeles);                      // vos décors (public/modeles/decor-<monde>-<rôle>.glb) remplacent ceux de Kenney
 const fanal = createFanal(glow, modeles);
 scene.add(fanal.object);
+// ombre douce sous Fanal : on voit toujours où il va retomber
+const ombreFanal = (() => {
+  const c = document.createElement('canvas'); c.width = c.height = 64; const x = c.getContext('2d');
+  const g = x.createRadialGradient(32, 32, 2, 32, 32, 31); g.addColorStop(0, 'rgba(20,10,40,.55)'); g.addColorStop(0.6, 'rgba(20,10,40,.3)'); g.addColorStop(1, 'rgba(20,10,40,0)');
+  x.fillStyle = g; x.fillRect(0, 0, 64, 64);
+  const o = new THREE.Mesh(new THREE.PlaneGeometry(1.3, 1.3), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(c), transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 }));
+  o.renderOrder = 1; scene.add(o); return o;
+})();
+function placerOmbre() {
+  const P = planet; ombreFanal.visible = !!P && (S.state === 'jeu' || S.state === 'titre') && fanal.object.visible;
+  if (!ombreFanal.visible) return;
+  const n = S.pos.clone().sub(P.center), dist = n.length(); n.normalize();
+  let sol = P.surface(n);
+  for (const o of P.solides) {                                   // au-dessus d'un rocher ou d'un îlot : l'ombre se pose dessus
+    const rel = S.pos.clone().addScaledVector(o.dir, -P.surface(o.dir)), h = rel.dot(o.dir);
+    if (h < o.haut - 0.5) continue;
+    if (projectOnPlane(rel, o.dir).length() > o.radius) continue;
+    sol = Math.max(sol, P.surface(o.dir) + o.haut);
+  }
+  if (P.mer && dist > P.radius + P.mer - 0.2) sol = Math.max(sol, P.radius + P.mer);
+  const haut = Math.max(0, dist - sol), k = THREE.MathUtils.clamp(1 - haut / 9, 0.25, 1);
+  ombreFanal.position.copy(P.center).addScaledVector(n, sol + 0.04);
+  ombreFanal.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), n);
+  ombreFanal.scale.setScalar(0.6 + k * 0.5); ombreFanal.material.opacity = k;
+}
 const vaisseau = createVaisseau(glow, modeles);
 scene.add(vaisseau.object);
 const ombrelles = createOmbrelles(scene, modeles);
@@ -816,7 +841,7 @@ function frame(now) {
   if (S.state === 'jeu' || S.state === 'titre') vaisseau.animate(dt, 0, 0);
   if (S.state !== 'jeu') $('embarquer').hidden = true;
   updateParts(dt); updateOndes(dt);
-  placeFanal(dt);
+  placeFanal(dt); placerOmbre();
   updateCamera(dt);
   // cinématiques et univers : après la caméra, pour pouvoir la diriger
   if (S.state === 'decollage') updateDecollage(dt);
@@ -824,6 +849,10 @@ function frame(now) {
   else if (S.state === 'cosmos') cosmos.update(dt);
   reperer(clock);
   sky.position.copy(camera.position);
+  // ambiance : ciel de jour et soleil plus fort quand on est sur une planète, encore plus quand son phare brille
+  const jour = planet && S.state !== 'cosmos' ? 0.55 + 0.45 * planet.litT : 0;
+  sky.jour(jour, S.state === 'cosmos' ? null : S.up);
+  sun.intensity = 1.6 + jour * 0.9; hemi.intensity = 1.35 + jour * 0.35;
   renderer.render(scene, camera);
 }
 

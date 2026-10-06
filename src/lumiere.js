@@ -48,7 +48,7 @@ const FRAG = /* glsl */`
   totalEmissiveRadiance += uMotifCol * smoothstep(0.9, 0.99, vn(dir * uScale * 14.0)) * 1.6;
 #endif
   float g = dot(diffuseColor.rgb, vec3(0.299, 0.587, 0.114));
-  vec3 eteint = vec3(g) * vec3(0.62, 0.68, 0.84) * 0.62;     // gris-bleu fade
+  vec3 eteint = mix(vec3(g) * vec3(0.66, 0.72, 0.9) * 0.78, diffuseColor.rgb * 0.8, 0.22);   // gris-bleu doux, un soupçon de la vraie couleur
   diffuseColor.rgb = mix(eteint, diffuseColor.rgb, lit);
   totalEmissiveRadiance *= lit;
 }`;
