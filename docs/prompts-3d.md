@@ -180,3 +180,71 @@ Coller après le STYLE COMMUN. Ce sont des **créatures du jeu**, pas des animau
 | `relais.glb` | lanterne-relais | `A small checkpoint lamp post: dark wooden pole with a curved arm holding a hexagonal lantern, purple metal base, cozy and inviting.` |
 | `cage-ombre.glb` | cage d'ombre | `A magical prison cage made of twisted dark purple shadow bars, a round dome top with a wispy shadow swirl, faint violet glow, spooky but cartoon.` |
 | `relais-brasero.glb` | brasero (missions) | `A small round stone brazier on three legs, empty bowl ready to be lit, carved star patterns.` |
+
+# 6. Les décors de chaque monde (optionnel : sinon le jeu garde ses décors Kenney)
+
+Nom du fichier : `decor-<monde>-<rôle>[-numéro].glb`, dans `public/modeles/`.
+Mettre `tous` à la place du monde pour un décor valable partout. Le jeu remet chaque décor à la bonne taille tout seul.
+
+| Rôle | Ce que c'est | Hauteur dans le jeu |
+|---|---|---|
+| `arbre` | grand végétal ou élément vertical | 5 |
+| `champi` | plante moyenne, champignon | 2,2 |
+| `petit` | fleur, herbe, caillou | 0,6 |
+| `rocher` | rocher sur lequel on peut monter | 1,5 |
+| `deco` | objet d'ambiance (panneau, tonneau…) | 1,3 |
+| `cachette` | tente, cabane, grotte où se cache un habitant | 2,2 |
+| `ilot` | plateforme flottante (dessus plat) | 0,8 |
+| `escalier-bas` / `escalier-moyen` / `escalier-haut` | blocs pour grimper, du plus bas au plus haut | 1 / 1,9 / 3,2 |
+
+Exemples : `decor-menthe-arbre-1.glb`, `decor-menthe-arbre-2.glb`, `decor-lave-rocher.glb`, `decor-tous-petit.glb`.
+
+Les 18 mondes : `menthe` (prairie), `lave`, `etoilee`, `givre`, `verdoyance` (ferme), `dunes`, `corail`, `marais`, `lagon`,
+`volcan`, `hantee`, `pirate`, `royaume`, `gourmande` (bonbons), `fetes` (hiver/Noël), `bourg` (village), `ocean`, `nuages`.
+
+Conseil : 2 à 3 versions d'arbre et de rocher par monde suffisent, le jeu les mélange et les tourne au hasard.
+
+# 7. Les textures de sol des planètes (images 2D, pas de 3D)
+
+Une **image carrée qui se répète sans raccord** (« seamless / tileable »), vue **du dessus**, sans ombre ni perspective.
+Nom : `sol-<monde>.png` (ou `.jpg`), dans `public/textures/`. Exemple : `sol-menthe.png`, `sol-lave.jpg`.
+`sol-tous.png` s'applique aux mondes qui n'ont pas la leur.
+
+- Taille : 1024 × 1024 (512 suffit pour un sol simple ; plus grand alourdit l'APK).
+- Couleurs vives et motifs assez gros : la texture se répète environ tous les 5 pas de Fanal.
+- Le jeu la projette sur la sphère tout seul, et garde les creux un peu plus sombres que les bosses.
+- Planète éteinte : le jeu la grise automatiquement, puis la vague de couleur la rallume.
+- Vérification : mets l'image 2 × 2 côte à côte ; si on voit une ligne de raccord, elle n'est pas « seamless ».
+
+Début de prompt (Gemini) à coller avant chaque monde :
+`Seamless tileable texture, top-down view, stylized cartoon game ground, flat even lighting, no shadows, no perspective, vibrant colors, hand-painted style like a cozy 3D platformer, square image.`
+
+| Fichier | Fin du prompt |
+|---|---|
+| `sol-menthe.png` | `soft mint-green grass with small pink and yellow flowers and clover patches` |
+| `sol-lave.png` | `dark cooled basalt rock with glowing orange cracks` |
+| `sol-etoilee.png` | `deep violet stardust ground with tiny glittering crystals` |
+| `sol-givre.png` | `fresh snow with light blue ice patches and sparkles` |
+| `sol-verdoyance.png` | `lush farm grass with little dirt paths and leaves` |
+| `sol-dunes.png` | `warm golden sand with soft ripples and tiny shells` |
+| `sol-corail.png` | `pink coral sand with small seashells and pebbles` |
+| `sol-marais.png` | `mossy swamp ground, green-purple moss and small puddles` |
+| `sol-lagon.png` | `white beach sand with turquoise wet patches` |
+| `sol-volcan.png` | `red-brown volcanic gravel with small glowing embers` |
+| `sol-hantee.png` | `dark lilac haunted ground with fallen leaves and faint glowing mushrooms` |
+| `sol-pirate.png` | `sandy island ground with wooden plank bits and pebbles` |
+| `sol-royaume.png` | `neat castle garden grass with cobblestone tiles` |
+| `sol-gourmande.png` | `candy ground: pink frosting, sprinkles and cookie crumbs` |
+| `sol-fetes.png` | `snowy ground with tiny red and gold confetti` |
+| `sol-bourg.png` | `village dirt and short grass with small cobblestones` |
+| `sol-ocean.png` | `sea floor sand with small corals and starfish` |
+| `sol-nuages.png` | `fluffy pastel lavender cloud surface, soft and puffy` |
+
+# Ordre conseillé
+
+1. Images Gemini de tous les personnages (sections 1 à 4) → 3D Meshy (avec textures) → `.glb`.
+2. Objets importants (section 5).
+3. Décors des mondes (section 6), en commençant par les premières planètes : menthe, lave, ocean, nuages.
+4. Textures de sol (section 7) : directement des images Gemini, pas besoin de Meshy.
+
+Chaque fichier déposé remplace automatiquement la version actuelle au prochain build : on peut avancer petit à petit.

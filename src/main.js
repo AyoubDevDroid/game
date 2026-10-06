@@ -6,7 +6,7 @@ import { initAudio, sfx, startMusic, stopMusic, toggleMute, pauseAudio, resumeAu
 import { vibre, pleinEcran, ecranAllume } from './mobile.js';
 import { createFanal } from './fanal.js';
 import { createPlanet, createSky, makeGlowTexture, animatePlanet } from './world.js';
-import { chargerModeles } from './modeles.js';
+import { chargerModeles, chargerTextures } from './modeles.js';
 import { createOmbrelles } from './ombrelles.js';
 import { createGardien } from './gardien.js';
 import { createVaisseau } from './vaisseau.js';
@@ -38,7 +38,7 @@ const fill = new THREE.DirectionalLight(0xb48cff, 0.6); fill.position.set(-40, -
 
 const glow = makeGlowTexture();
 const sky = createSky(scene, glow);
-const modeles = await chargerModeles();          // modèles .glb de public/modeles (s'il y en a)
+const [modeles] = await Promise.all([chargerModeles(), chargerTextures()]);          // modèles .glb de public/modeles (s'il y en a)
 await Promise.all([chargerDecors(), chargerFaune()]);   // objets 3D et animaux des planètes (public/decors, packs CC0)
 enregistrerDecors(modeles);                      // vos décors (public/modeles/decor-<monde>-<rôle>.glb) remplacent ceux de Kenney
 const fanal = createFanal(glow, modeles);

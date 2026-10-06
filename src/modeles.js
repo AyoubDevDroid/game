@@ -19,6 +19,19 @@ export async function chargerModeles() {
   return out;
 }
 
+// Textures de sol (public/textures/sol-<monde>.png) : images carrées qui se répètent sans raccord.
+// eslint-disable-next-line no-undef
+const IMAGES = typeof __TEXTURES__ !== 'undefined' ? __TEXTURES__ : [];
+export const TEXTURES = {};                        // 'sol-menthe' → THREE.Texture
+export async function chargerTextures() {
+  const loader = new THREE.TextureLoader();
+  await Promise.all(IMAGES.map(f => loader.loadAsync(`./textures/${f}`).then(t => {
+    t.wrapS = t.wrapT = THREE.RepeatWrapping; t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4;
+    t.userData.partage = true;
+    TEXTURES[f.replace(/\.\w+$/, '')] = t;
+  }).catch(e => console.warn('Texture illisible :', f, e))));
+}
+
 // Met un modèle à la bonne taille (hauteur en unités du jeu), pieds en y = 0, centré.
 // Renvoie la liste de ses morceaux { geo, mat } prêts à être placés.
 export function morceaux(scene, hauteur) {

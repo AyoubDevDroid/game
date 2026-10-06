@@ -6,7 +6,10 @@ import * as THREE from 'three';
 const GLSL = /* glsl */`
 varying vec3 vWP;
 uniform vec3 uCenter, uBeacon, uMotifCol;
-uniform float uWave, uScale;
+uniform float uWave, uScale, uTexScale;
+#if TEX
+uniform sampler2D uTex;
+#endif
 float h3(vec3 p){ p = fract(p * 0.3183099 + 0.1); p *= 17.0; return fract(p.x * p.y * p.z * (p.x + p.y + p.z)); }
 float vn(vec3 x){
   vec3 i = floor(x), f = fract(x); f = f * f * (3.0 - 2.0 * f);
@@ -29,6 +32,12 @@ const FRAG = /* glsl */`
   vec3 dir = normalize(vWP - uCenter);
   float ang = acos(clamp(dot(dir, uBeacon), -1.0, 1.0));
   float lit = 1.0 - smoothstep(uWave - 0.35, uWave, ang);
+#if TEX                                                // texture de sol : projetée sur les 3 axes (pas de raccord sur la sphère)
+  vec3 pp = (vWP - uCenter) * uTexScale, w = pow(abs(dir), vec3(4.0)); w /= w.x + w.y + w.z;
+  vec3 tc = texture2D(uTex, pp.yz).rgb * w.x + texture2D(uTex, pp.xz).rgb * w.y + texture2D(uTex, pp.xy).rgb * w.z;
+  float vl = dot(diffuseColor.rgb, vec3(0.299, 0.587, 0.114));
+  diffuseColor.rgb = tc * mix(1.0, vl / 0.55, 0.3);      // les creux restent un peu plus sombres que les bosses
+#endif
 #if MOTIF == 2                                         // lave : fissures lumineuses
   float k = 1.0 - smoothstep(0.012, 0.045, fissure(dir * uScale));
   diffuseColor.rgb *= 0.9 + 0.2 * vn(dir * uScale * 4.0);
@@ -52,9 +61,9 @@ export function uniformsPlanete(center, beaconDir) {
 export function regleVague(U, t) { U.uWave.value = -0.5 + t * (Math.PI + 1.0); }
 
 // motif : 0 aucun, 2 lave, 3 étoiles (l'herbe est peinte dans les couleurs du sol)
-export function allumable(mat, U, { motif = 0, motifCol = 0xffffff, scale = 6 } = {}) {
-  mat.defines = { ...(mat.defines || {}), MOTIF: motif };   // un programme par motif : on ne calcule que le nécessaire
-  const extra = { uMotifCol: { value: new THREE.Color(motifCol) }, uScale: { value: scale } };
+export function allumable(mat, U, { motif = 0, motifCol = 0xffffff, scale = 6, tex = null, texScale = 0.18 } = {}) {
+  mat.defines = { ...(mat.defines || {}), MOTIF: motif, TEX: tex ? 1 : 0 };   // un programme par motif : on ne calcule que le nécessaire
+  const extra = { uMotifCol: { value: new THREE.Color(motifCol) }, uScale: { value: scale }, uTexScale: { value: texScale }, ...(tex ? { uTex: { value: tex } } : {}) };
   mat.onBeforeCompile = sh => {
     Object.assign(sh.uniforms, U, extra);
     sh.vertexShader = sh.vertexShader
