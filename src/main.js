@@ -442,6 +442,8 @@ function updatePlayer(dt) {
         S.vel.addScaledVector(o.dir, -vrO);
       }
       S.onGround = true; S.airJumps = 1;
+    } else if (o.rebond) {
+      continue;                                                // un nuage se traverse par-dessous et par les côtés
     } else if (o.bas > 0.2 && h < o.bas && vrO > 0) {
       S.vel.addScaledVector(o.dir, -vrO);                      // la tête cogne le dessous d'un îlot
     } else if (d > 1e-4) {
@@ -853,7 +855,20 @@ function frame(now) {
   const jour = planet && S.state !== 'cosmos' ? 0.55 + 0.45 * planet.litT : 0;
   sky.jour(jour, S.state === 'cosmos' ? null : S.up);
   sun.intensity = 1.6 + jour * 0.9; hemi.intensity = 1.35 + jour * 0.35;
+  // ce qui est caché derrière la courbure de la planète n'est pas dessiné (juste le temps du rendu)
+  const caches = [];
+  if (planet && S.state !== 'cosmos') {
+    const R = planet.radius, cd = camera.position.distanceTo(planet.center);
+    const camDir = camera.position.clone().sub(planet.center).normalize(), hCam = Math.acos(Math.min(1, R / cd)), d = new THREE.Vector3();
+    for (const o of planet.group.children) {
+      if (!o.visible || o.isInstancedMesh || o === planet.beacon.group) continue;
+      d.copy(o.position).sub(planet.center); const lo = d.length(); if (lo < 1) continue;
+      const portee = hCam + Math.acos(Math.min(1, R / (lo + 2.5))) + 0.08;
+      if (d.divideScalar(lo).dot(camDir) < Math.cos(Math.min(Math.PI, portee))) { o.visible = false; caches.push(o); }
+    }
+  }
   renderer.render(scene, camera);
+  for (const o of caches) o.visible = true;
 }
 
 // écran titre : Brumelune en fond
@@ -862,4 +877,4 @@ updateCamera(0, true);
 requestAnimationFrame(frame);
 
 // accès pour les tests automatiques
-window.__jeu = { dialogue, ouvrirJournal, S, get planet() { return planet; }, get save() { return save; }, get faune() { return faune; }, ombrelles, cosmos, charger, decoller };
+window.__jeu = { renderer, dialogue, ouvrirJournal, S, get planet() { return planet; }, get save() { return save; }, get faune() { return faune; }, ombrelles, cosmos, charger, decoller };

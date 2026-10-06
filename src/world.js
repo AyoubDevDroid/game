@@ -205,6 +205,9 @@ export function createPlanet(scene, glow, modeles, L, allume = false, ramasses =
   const freq = L.freq * L.radius / 9;            // les collines gardent la même taille sur une grande planète
   // forme du relief : doux (collines), terrasses (marches), pics (crêtes), dunes (vagues)
   const axeDunes = new THREE.Vector3(L.seed % 7 - 3, 2, L.seed % 5 - 2).normalize();
+  // océan : un archipel d'îles où poser les pieds entre deux baignades
+  const ri = rng(L.seed * 5 + 2);
+  const iles = L.mer ? Array.from({ length: Math.round(L.radius / 5) }, () => ({ d: randomDir(ri), h: 1.6 + ri() * 1.2, w: 0.6 + ri() * 0.5 })) : [];
   const hauteur = d => {
     const p = d.clone().multiplyScalar(freq * 2).add(seedV);
     const n = bruit(p.x, p.y, p.z) * 0.65 + bruit(p.x * 2.3, p.y * 2.3, p.z * 2.3) * 0.35 - 0.5;
@@ -215,7 +218,10 @@ export function createPlanet(scene, glow, modeles, L, allume = false, ramasses =
     else h = L.relief * 2 * n;
     const a = d.angleTo(bDir);
     // océan : une île sous la Luciole (le reste de la planète est plus bas, sous la mer)
-    if (L.mer) h += 1.6 * Math.exp(-((d.angleTo(Y) / (0.5 * k)) ** 2)) - 0.6;
+    if (L.mer) {
+      h += 2.4 * Math.exp(-((d.angleTo(Y) / (1.2 * k)) ** 2)) - 0.6;
+      for (const ile of iles) h += ile.h * Math.exp(-((d.angleTo(ile.d) / (ile.w * k)) ** 2));
+    }
     return h + L.bosse.h * Math.exp(-((a / (L.bosse.w * k)) ** 2));
   };
   planet.surface = d => L.radius + hauteur(d);

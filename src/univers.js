@@ -149,7 +149,7 @@ export function planete(g, i) {
   const tirer = () => DEBUT[Math.floor(r() * DEBUT.length)] + (r() < 0.5 ? MILIEU[Math.floor(r() * MILIEU.length)] : '') + FIN[Math.floor(r() * FIN.length)];
   let nom = boss ? 'Le Grand Phare' : g === 0 && i === 0 ? 'Brumelune' : g === 0 && i === 1 ? 'Cendrine' : tirer();
   while (/vermin|merd|pute|cul|con[en]|nul/i.test(nom)) nom = tirer();   // pas de nom malheureux
-  const radius = boss ? 13 : biome.nuages ? 11 : Math.round(15 + r() * 7 + g * 0.3);
+  const radius = boss ? 22 : biome.nuages ? 18 : Math.round(30 + r() * 8 + g * 0.4);   // de vrais petits mondes à explorer
   const dir = () => { const u = r() * 2 - 1, a = r() * Math.PI * 2, s = Math.sqrt(1 - u * u); return [s * Math.cos(a), u, s * Math.sin(a)]; };
   let beacon = dir();
   while (beacon[1] > 0.2) beacon = dir();                 // le phare n'est jamais juste à côté du vaisseau
@@ -160,8 +160,8 @@ export function planete(g, i) {
     mer: biome.mer ? 0.35 : 0,                             // niveau de la mer au-dessus du rayon (planète océan)
     nuages: !!biome.nuages, gravite: biome.nuages ? 0.72 : 1,
     beacon, relief: biome.mer ? 1.25 : biome.nuages ? 0.35 : 0.5 + r() * 0.5, freq: 1 + r() * 0.6, bosse: { h: 1.2 + r() * 1.2, w: 0.25 + r() * 0.12 },
-    embers: boss ? 4 : 7 + Math.floor(r() * 4) + Math.floor(g / 4),
-    ombrelles: boss ? 2 + Math.floor(g / 3) : Math.min(12, 2 + Math.floor(radius / 6) + Math.floor(g * 0.6)),
+    embers: boss ? 4 : 6 + Math.floor(r() * 3) + Math.floor(radius / 8) + Math.floor(g / 4),
+    ombrelles: boss ? 2 + Math.floor(g / 3) : Math.min(18, 2 + Math.floor(radius / 5) + Math.floor(g * 0.6)),
     vitesse: 3.4 + g * 0.12,                               // vitesse des Ombrelles (Fanal court à 7,5)
     bossVie: 3 + Math.floor(g / 4),
     gardien: boss ? null : GARDIENS[Math.floor(r() * GARDIENS.length)],

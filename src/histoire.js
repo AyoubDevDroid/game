@@ -63,7 +63,7 @@ export const MEMOIRES = [
 //        commande (rapporter des ressources à l'ancien du village)
 export const MISSIONS = {
   sauvetage: { titre: 'Sauvetage', icone: '🙋', annonce: p => `Tous les ${p} sont prisonniers. Libère-les tous, jusqu\'au dernier !` },
-  braseros: { titre: 'Braseros', icone: '🔥', annonce: () => 'Quatre braseros attendent la flamme. Allume le premier, et tu auras 45 secondes pour allumer les autres !' },
+  braseros: { titre: 'Braseros', icone: '🔥', annonce: () => 'Quatre braseros attendent la flamme. Allume le premier, et dépêche-toi d’allumer les autres avant qu’il ne s’éteigne !' },
   commande: { titre: 'Commande', icone: '📦', annonce: (p, r, n) => `L\'ancien du village a besoin de ${n} ${r}. Rapporte-les-lui, il te le rendra bien.` },
 };
 export function missionDe(L) {

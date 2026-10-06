@@ -62,7 +62,7 @@ export function updateMission(M, planet, fanalPos, dt, clock) {
       b.braise.material.color.setHex(b.allume ? 0xffb347 : 0x3a2a30);
       if (!M.faite && !b.allume && fanalPos.distanceTo(b.pos) < 1.8) {
         b.allume = true; evt = { type: 'brasero', pos: b.pos.clone() };
-        if (n === 0) M.chrono = 45;
+        if (n === 0) M.chrono = 30 + Math.round(planet.radius);
       }
     }
     const n2 = M.braseros.filter(b => b.allume).length;
