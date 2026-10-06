@@ -922,6 +922,12 @@ function frame(now) {
   const jour = planet && S.state !== 'cosmos' ? 0.55 + 0.45 * planet.litT : 0;
   sky.jour(jour, S.state === 'cosmos' ? null : S.up);
   sun.intensity = 1.6 + jour * 0.9; hemi.intensity = 1.35 + jour * 0.35;
+  // transparence entre la caméra et Fanal (désactivée hors du jeu, pour les cinématiques)
+  if (planet) {
+    const voir = S.state === 'jeu' && !S.camLibre;
+    planet.U.uFanal.value.copy(voir ? S.pos.clone().addScaledVector(S.up, 0.6) : new THREE.Vector3(0, 1e6, 0));
+    planet.U.uCam.value.copy(voir ? camera.position : new THREE.Vector3(0, 1e6, 0));
+  }
   // ce qui est caché derrière la courbure de la planète n'est pas dessiné (juste le temps du rendu)
   const caches = [];
   if (planet && S.state !== 'cosmos') {

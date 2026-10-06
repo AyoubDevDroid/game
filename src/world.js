@@ -217,7 +217,7 @@ export function createPlanet(scene, glow, modeles, L, allume = false, ramasses =
       const d = Y.clone().applyAxisAngle(axe, u / R);
       return d.addScaledVector(axe, lat / R).normalize();                     // l'axe de rotation est perpendiculaire au trajet : c'est « sur le côté »
     };
-    iles.push({ d: Y.clone(), rad: 10.5, h: 1 });
+    iles.push({ d: Y.clone(), rad: 14, h: 1 });
     // le trajet serpente : Luciole → premier détour → second détour → phare
     const detour = (de, ang) => de.clone().applyAxisAngle(randomDir(ra).cross(de).normalize(), ang);
     const cote1 = (ra() < 0.5 ? -1 : 1) * (14 + ra() * 14);
@@ -226,18 +226,18 @@ export function createPlanet(scene, glow, modeles, L, allume = false, ramasses =
     let prec = iles[0], n = 0, ci = 0;
     for (let pas = 0; pas < 40 && ci < cibles.length; pas++) {
       const cible = cibles[ci], dernier = ci === cibles.length - 1;
-      const long = n % 2 === 1, gap = long ? 9 + ra() * 3.5 : 3 + ra() * 2.5, rad = 5 + ra() * 2.5;   // un trou sur deux demande un pont
+      const long = n % 2 === 1, gap = long ? 9 + ra() * 3.5 : 3 + ra() * 2.5, rad = 8 + ra() * 4;   // un trou sur deux demande un pont
       const reste = prec.d.angleTo(cible) * R;
-      if (dernier && reste < prec.rad + gap + 2 * rad + 9.5) break;                      // assez près du phare
+      if (dernier && reste < prec.rad + gap + 2 * rad + 13) break;                      // assez près du phare
       if (!dernier && reste < prec.rad + gap + rad) { ci++; continue; }
       const ax = new THREE.Vector3().crossVectors(prec.d, cible).normalize();
       const d = prec.d.clone().applyAxisAngle(ax, (prec.rad + gap + rad) / R);
       d.addScaledVector(ax, (ra() - 0.5) * 4 / R).normalize();
-      if (iles.some(o => o !== prec && o.d.angleTo(d) * R < o.rad + rad + 3) || d.angleTo(bDir) * R < rad + 13) { ci++; continue; }
+      if (iles.some(o => o !== prec && o.d.angleTo(d) * R < o.rad + rad + 3) || d.angleTo(bDir) * R < rad + 17) { ci++; continue; }
       const ile = { d, rad, h: THREE.MathUtils.clamp(prec.h + (ra() - 0.35) * 2.2, 0.5, 5) };
       iles.push(ile); liens.push({ a: prec, b: ile, gap, long }); prec = ile; n++;
     }
-    const fin = { d: bDir.clone(), rad: 9.5, h: Math.min(prec.h + 0.5, 3) };
+    const fin = { d: bDir.clone(), rad: 13, h: Math.min(prec.h + 0.5, 3) };
     const gapFin = prec.d.angleTo(bDir) * R - prec.rad - fin.rad;
     iles.push(fin); liens.push({ a: prec, b: fin, gap: gapFin, long: gapFin > 7 });
     const chaine = iles.slice(1, -1);
@@ -248,7 +248,7 @@ export function createPlanet(scene, glow, modeles, L, allume = false, ramasses =
     for (let s = 0, essais = 0; s < 4 && chaine.length && essais < 40; essais++) {
       const base = chaine[Math.floor(ra() * chaine.length)];
       const cote = axe.clone().addScaledVector(base.d, -axe.dot(base.d)).normalize().multiplyScalar(ra() < 0.5 ? -1 : 1);
-      const rad = 4 + ra() * 1.5, gap = 5 + ra() * 2;
+      const rad = 6 + ra() * 2, gap = 5 + ra() * 2;
       const d = base.d.clone().addScaledVector(cote, (base.rad + gap + rad) / R).normalize();
       const milieu = base.d.clone().addScaledVector(cote, (base.rad + gap / 2) / R).normalize();
       if (!libre(d, rad + 4) || trajet.some(q => q.angleTo(milieu) * R < base.rad + 1.5 && q.angleTo(base.d) * R > 0.5)) continue;

@@ -158,7 +158,7 @@ export function planete(g, i) {
   while (beacon[1] > 0.2) beacon = dir();                 // le phare n'est jamais juste à côté du vaisseau
   const taille = plat ? 34 + Math.round(g * 0.4) : radius;   // taille « jouable » (sert à doser le contenu)
   const R = plat ? 1500 : radius;                          // niveau plat : une planète si grande qu'on ne voit plus la courbure
-  if (plat) { const a = (190 + (seed % 7) * 12) / R; beacon = [0, Math.cos(a), Math.sin(a)]; }
+  if (plat) { const a = (250 + (seed % 7) * 14) / R; beacon = [0, Math.cos(a), Math.sin(a)]; }
   return {
     g, i, seed, nom, boss, radius: R, taille, plat, biome: biome.nom,
     sol, motif: biome.motif, motifCol: pal.motif, scale: biome.scale, herbe: pal.herbe, decors: biome.decors,

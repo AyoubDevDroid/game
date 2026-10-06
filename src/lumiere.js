@@ -5,7 +5,7 @@ import * as THREE from 'three';
 
 const GLSL = /* glsl */`
 varying vec3 vWP;
-uniform vec3 uCenter, uBeacon, uMotifCol;
+uniform vec3 uCenter, uBeacon, uMotifCol, uFanal, uCam;
 uniform float uWave, uScale, uTexScale;
 #if TEX
 uniform sampler2D uTex;
@@ -32,6 +32,15 @@ float fissure(vec3 x){              // distance entre les deux cellules les plus
 const FRAG = /* glsl */`
 #include <emissivemap_fragment>
 {
+  // ce qui passe entre la caméra et Fanal devient transparent (un cône qui s'ouvre vers lui) : on le voit toujours
+  vec3 ab = uFanal - uCam;
+  float tt = dot(vWP - uCam, ab) / max(dot(ab, ab), 1e-4);
+  float hf = dot(vWP - uFanal, normalize(uFanal - uCenter));      // le sol et ce qui est plus bas que ses pieds restent pleins
+  if (tt > 0.02 && tt < 0.9 && hf > -0.45) {
+    float k = length(vWP - (uCam + ab * tt)) / (0.35 + 1.9 * tt);
+    if (k < 0.72) discard;
+    if (k < 1.0 && mod(floor(gl_FragCoord.x) + floor(gl_FragCoord.y), 2.0) < 1.0) discard;   // bord tramé : passage en douceur
+  }
   vec3 dir = normalize(vWP - uCenter);
   float ang = acos(clamp(dot(dir, uBeacon), -1.0, 1.0));
   float lit = 1.0 - smoothstep(uWave - 0.35, uWave, ang);
@@ -68,7 +77,8 @@ const FRAG = /* glsl */`
 
 // Réglages partagés par tous les objets d'une planète
 export function uniformsPlanete(center, beaconDir) {
-  return { uCenter: { value: center.clone() }, uBeacon: { value: beaconDir.clone() }, uWave: { value: -0.5 } };
+  return { uCenter: { value: center.clone() }, uBeacon: { value: beaconDir.clone() }, uWave: { value: -0.5 },
+    uFanal: { value: new THREE.Vector3(0, 1e6, 0) }, uCam: { value: new THREE.Vector3(0, 1e6, 0) } };
 }
 // t de 0 (éteinte) à 1 (entièrement rallumée)
 export function regleVague(U, t) { U.uWave.value = -0.5 + t * (Math.PI + 1.0); }
