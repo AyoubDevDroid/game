@@ -163,7 +163,9 @@ export function tracerChemin(ctx) {
   }
   group.add(cailloux);
   // trois lanternes-relais le long du chemin
-  const lesRelais = [0.3, 0.58, 0.84].map((t, n2) => {
+  // lanternes-relais : environ une tous les 25 pas de chemin (points de reprise rapprochés)
+  const nbRelais = Math.max(3, Math.min(9, Math.round(points.length * pas * R / 25)));
+  const lesRelais = Array.from({ length: nbRelais }, (_, k) => 0.12 + 0.8 * (k + 0.5) / nbRelais).map((t, n2) => {
     let j = Math.floor(t * (points.length - 1));
     if (ctx.terre) for (let e = 0; e < points.length * 2; e++) {           // archipel : la lanterne se pose sur une île, jamais au-dessus du vide
       const jj = j + (e % 2 ? -1 : 1) * Math.ceil(e / 2);

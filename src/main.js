@@ -604,15 +604,16 @@ function chute() {
   if (S.vies <= 0) reprendre(); else message('Plouf dans les nuages !', 'Fanal perd une flamme', 1300);
 }
 function reprendre() {
+  S.vel.set(0, 0, 0); S.invuln = 2.5;                                // plus rien ne peut le toucher pendant le fondu
   fondu(true);
   setTimeout(() => {
     const d = S.reprise ? S.reprise.clone() : new THREE.Vector3(0, Math.cos(3.4 / planet.radius), Math.sin(3.4 / planet.radius));
     S.up.copy(d); S.pos.copy(planet.surfacePoint(d)).addScaledVector(d, 0.5); S.vel.set(0, 0, 0);
     S.vies = 3; S.invuln = 2; hud(); updateCamera(0, true);
     fanal.setMood('surpris', 1.2); sfx.respawn();
-    message('Fanal se rallume…', S.reprise ? 'à la dernière lanterne-relais' : 'près de la Luciole', 2000);
+    message('Fanal se rallume !', '', 900);
     fondu(false);
-  }, 380);
+  }, 160);
 }
 function ouvrirCoffre(c) {
   c.ouvert = true;
