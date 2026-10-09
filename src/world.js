@@ -217,6 +217,20 @@ export function createPlanet(scene, glow, modeles, L, allume = false, ramasses =
       const d = Y.clone().applyAxisAngle(axe, u / R);
       return d.addScaledVector(axe, lat / R).normalize();                     // l'axe de rotation est perpendiculaire au trajet : c'est « sur le côté »
     };
+    if (L.plan) {                                            // niveau-parcours : les îles du plan, module par module
+      const X = new THREE.Vector3(1, 0, 0), pa = (u, lat) => new THREE.Vector3(lat / R, Math.cos(u / R), Math.sin(u / R)).normalize();
+      axe.copy(X);
+      for (const p of L.plan.iles) iles.push({ d: pa(p.u, p.lat), rad: p.rad, h: p.h, role: p.role, contenu: p.contenu });
+      for (let k = 1; k < iles.length; k++) { const p = L.plan.iles[k]; liens.push({ a: iles[k - 1], b: iles[k], gap: p.gap, long: p.trou !== 'court', pont: p.trou }); }
+      for (const s of L.plan.secrets) {
+        const base = iles[s.base], cote = axe.clone().addScaledVector(base.d, -axe.dot(base.d)).normalize().multiplyScalar(s.cote);
+        const rad = 6.5, gap = 6, d = base.d.clone().addScaledVector(cote, (base.rad + gap + rad) / R).normalize();
+        if (iles.some(o => o !== base && o.d.angleTo(d) * R < o.rad + rad + 2)) cote.negate(), d.copy(base.d).addScaledVector(cote, (base.rad + gap + rad) / R).normalize();
+        const ile = { d, rad, h: base.h + 3.5, secrete: true, role: 'secret', contenu: { habitants: 2, coffre: true } };
+        iles.push(ile); liens.push({ a: base, b: ile, gap, secret: true });
+      }
+      return { iles, liens, ra };
+    }
     iles.push({ d: Y.clone(), rad: 14, h: 1 });
     // le trajet serpente : Luciole → premier détour → second détour → phare
     const detour = (de, ang) => de.clone().applyAxisAngle(randomDir(ra).cross(de).normalize(), ang);
@@ -467,7 +481,7 @@ export function createPlanet(scene, glow, modeles, L, allume = false, ramasses =
   const ctxP = { L, r, k, group: planet.group, surfacePoint: planet.surfacePoint, placeOn, marquer, glow, U, allumable, obstacles: planet.obstacles, solides: planet.solides };
   const depart = new THREE.Vector3(0, Math.cos(6 / L.radius), Math.sin(6 / L.radius));
   const arrivee = bDir.clone().applyAxisAngle(new THREE.Vector3().crossVectors(bDir, depart).normalize(), 2.6 / L.radius);
-  const chemin = tracerChemin({ ...ctxP, depart, arrivee, terre: planet.terre, etapes: archi ? archi.iles.filter(o => !o.secrete).map(o => o.d) : null });
+  const chemin = tracerChemin({ ...ctxP, depart, arrivee, terre: planet.terre, relaisDirs: archi && L.plan ? archi.iles.filter(o => o.contenu && o.contenu.relais).map(o => o.d) : null, etapes: archi ? archi.iles.filter(o => !o.secrete).map(o => o.d) : null });
   const avec3D = decorsPrets();
   // ---- monde océan : une mer qui recouvre la planète, d'où émergent des îles ----
   if (L.mer) {
@@ -521,6 +535,7 @@ export function createPlanet(scene, glow, modeles, L, allume = false, ramasses =
   // ---- archipel : mer de nuages, plateformes mobiles, nuages-ressorts et courants d'air entre les îles ----
   planet.mobiles = [];
   planet.liens = archi ? archi.liens : [];
+  planet.iles = archi ? archi.iles : null;
   if (archi) {
     const R = L.radius, ra = archi.ra;
     const merNuages = L.plat ? R - 22 : R - 1.6;
@@ -554,7 +569,7 @@ export function createPlanet(scene, glow, modeles, L, allume = false, ramasses =
       }
       if (!l.long) return;                                     // petit trou : un double saut suffit
       const haut = R + Math.min(a.h, b.h);
-      if (nLong++ % 2 === 1) {                                 // deux nuages-ressorts au-dessus du vide
+      if (l.pont ? l.pont === 'ressorts' : nLong++ % 2 === 1) {                                 // deux nuages-ressorts au-dessus du vide
         for (const t of [0.33, 0.67]) nuagesPos.push({ d: vers(bord(a, b, 0), bord(b, a, 0), t), abs: haut - 1.2 });
         return;
       }
@@ -583,6 +598,26 @@ export function createPlanet(scene, glow, modeles, L, allume = false, ramasses =
     }
   }
   planet.mer = L.mer || 0; planet.gravite = L.gravite || 1;
+  const cristauxPlan = [];
+  if (archi && L.plan) {
+    const matPilier = allumable(new THREE.MeshLambertMaterial({ color: L.palette ? L.palette.terre : 0xb08060 }), U, { tex: peindreRoche(L), texScale: 0.3, plein: true });
+    const matDessus = allumable(new THREE.MeshLambertMaterial({ color: L.palette ? L.palette.sol.haut : 0x9af2cc }), U, { plein: true });
+    for (const ile of archi.iles) {
+      const c = ile.contenu || {};
+      if (c.cristal === 'centre') cristauxPlan.push({ dir: ile.d.clone(), h: 0.9 });
+      if (c.cristal !== 'piliers') continue;
+      const t1 = new THREE.Vector3().crossVectors(ile.d, new THREE.Vector3(1, 0, 0)).normalize();
+      [[-3.2, 1.5], [0, 2.9], [3.2, 4.3]].forEach(([o, hh], k) => {
+        const d = ile.d.clone().addScaledVector(t1, o / L.radius).normalize(), base = planet.surfacePoint(d);
+        const p = new THREE.Mesh(new THREE.CylinderGeometry(1.05, 1.25, hh + 0.4, 16), matPilier);
+        const top = new THREE.Mesh(new THREE.CylinderGeometry(1.12, 1.12, 0.18, 16), matDessus);
+        p.position.y = (hh + 0.4) / 2 - 0.4; top.position.y = hh; const g = new THREE.Group(); g.add(p, top);
+        placeOn(g, d); planet.group.add(g);
+        planet.solides.push({ dir: d.clone(), radius: 1.1, bas: 0, haut: hh + 0.09 }); marquer(d, 0.35);
+        if (k === 2) cristauxPlan.push({ dir: d.clone(), h: hh + 1.0 });
+      });
+    }
+  }
   const densite = archi ? THREE.MathUtils.clamp(archi.iles.reduce((t, o) => t + o.rad * o.rad, 0) / (4 * L.radius * L.radius) * 2.5, 0, 1) : 1;
   let coins = avec3D ? amenager({ densite, L, r, k, center, U, group: planet.group, surfacePoint: planet.surfacePoint, freeDir, marquer, allumable, solides: planet.solides }) : [];
   coins = coins.filter(c => planet.terre(c.dir));            // archipel : pas de cachette au-dessus du vide
@@ -591,11 +626,12 @@ export function createPlanet(scene, glow, modeles, L, allume = false, ramasses =
   coins = coins.slice(0, nbCoinsBraises);
   // sur un monde de nuages, une partie des braises est tout en haut des spirales de nuages
   for (const c of planet.coinsNuages) if (coins.length > 1) coins[Math.floor(r() * coins.length)] = c;
+  if (L.plan) coins = cristauxPlan;
 
   // ---- braises : d'abord dans les coins à explorer (sommets, îlots, cachettes), puis ailleurs ----
   planet.embers = [];
   let cristalGlb = null;
-  for (let i = 0; i < L.embers; i++) {
+  for (let i = 0; i < (L.plan ? coins.length : L.embers); i++) {
     const coin = coins[i]; let dd = coin ? coin.dir.clone() : freeDir(0.55);
     let hauteur = coin ? coin.h : 0.9;
     for (let passe = 0; passe < 4; passe++) {            // dans un rocher ? bas : on le pose dessus ; haut : on le pousse à côté
@@ -642,7 +678,23 @@ export function createPlanet(scene, glow, modeles, L, allume = false, ramasses =
   };
   const prendre = n => { const out = []; for (let i = 0; i < n; i++) out.push(coinsRestants.length ? coinsRestants.shift() : cachette()); return out; };
   const nbHabitants = L.boss ? 0 : L.defi ? 5 : 8;     // 6 à 10 habitants par niveau (docs/GAMEPLAN.md)
-  const coinsCoffres = prendre(L.boss ? 0 : 3), coinsHab = prendre(nbHabitants);
+  let coinsCoffres = prendre(L.boss ? 0 : 3), coinsHab = prendre(nbHabitants);
+  if (archi && L.plan) {                                  // niveau-parcours : chaque île a ses habitants et ses coffres
+    const surIle = ile => {
+      for (let n = 0; n < 20; n++) {
+        const a = r() * Math.PI * 2, rr = ile.rad * (0.35 + r() * 0.35), t1 = new THREE.Vector3().crossVectors(ile.d, new THREE.Vector3(1, 0, 0)).normalize(), t2 = new THREE.Vector3().crossVectors(ile.d, t1);
+        const d = ile.d.clone().addScaledVector(t1, Math.cos(a) * rr / L.radius).addScaledVector(t2, Math.sin(a) * rr / L.radius).normalize();
+        if (!planet.solides.some(s => s.bas < 0.5 && d.angleTo(s.dir) * L.radius < s.radius + 0.8)) return { dir: d, h: 0.9 };
+      }
+      return { dir: ile.d.clone(), h: 0.9 };
+    };
+    coinsHab = []; coinsCoffres = [];
+    for (const ile of archi.iles) {
+      const c = ile.contenu || {};
+      for (let n = 0; n < (c.habitants || 0); n++) coinsHab.push(surIle(ile));
+      if (c.coffre) coinsCoffres.push(surIle(ile));
+    }
+  }
   const coinsFlam = [0, 1, 2, 3].map(() => ({ dir: freeDir(0.3), h: 1.1 }));
   for (const c of [...coinsCoffres, ...coinsHab, ...coinsFlam]) marquer(c.dir, 0.25);
   planet.parcours = { ...chemin, ...placerTresors(ctxP, coinsCoffres, coinsHab, coinsFlam, deja) };

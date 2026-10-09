@@ -67,9 +67,15 @@ export function installerPieces(planet) {
   const nbFixes = items.length;
 
   // caisses
-  const caisses = [], nbCaisses = Math.min(16, 8 + Math.floor((P.taille || R) / 5));
+  const caisses = [], plan = P.iles && P.plan ? P.iles.flatMap(ile => Array((ile.contenu && ile.contenu.caisses) || 0).fill(ile)) : null;
+  const nbCaisses = plan ? plan.length : Math.min(16, 8 + Math.floor((P.taille || R) / 5));
   for (let k = 0; k < nbCaisses; k++) {
-    const d = P.freeDir(0.45), sol = P.surface(d);
+    let d = P.freeDir(0.45);
+    if (plan) {                                                       // niveau-parcours : sur l'île prévue
+      const ile = plan[k], a = r() * Math.PI * 2, rr = ile.rad * (0.3 + r() * 0.45), t1 = new THREE.Vector3().crossVectors(ile.d, new THREE.Vector3(1, 0, 0)).normalize(), t2 = new THREE.Vector3().crossVectors(ile.d, t1);
+      d = ile.d.clone().addScaledVector(t1, Math.cos(a) * rr / R).addScaledVector(t2, Math.sin(a) * rr / R).normalize();
+    }
+    const sol = P.surface(d);
     if (P.solides.some(s => !s.rebond && s.bas < 0.5 && d.angleTo(s.dir) * R < s.radius + 0.7)) continue;   // pas de caisse dans un rocher
     const o = { dir: d.clone(), radius: 0.62, bas: 0, haut: 0.9, caisse: true };
     P.solides.push(o);

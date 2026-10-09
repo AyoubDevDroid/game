@@ -225,6 +225,15 @@ export function createOmbrelles(scene, modeles = {}) {
   function peupler(P) {
     vider();
     const r = rng(P.seed * 7 + 5), roster = ROSTER[P.biome] || ROSTER.menthe;
+    const arenes = P.iles ? P.iles.filter(o => o.contenu && o.contenu.ennemis) : [];
+    if (arenes.length && !P.boss) {                          // niveau-parcours : les ennemis gardent les arènes
+      let k = 0;
+      for (const ile of arenes) for (let n = 0; n < ile.contenu.ennemis; n++) {
+        const a = r() * Math.PI * 2, rr = ile.rad * (0.2 + r() * 0.4), t1 = new THREE.Vector3().crossVectors(ile.d, new THREE.Vector3(1, 0, 0)).normalize(), t2 = new THREE.Vector3().crossVectors(ile.d, t1);
+        ajouter(P, roster[k++ % roster.length], ile.d.clone().addScaledVector(t1, Math.cos(a) * rr / P.radius).addScaledVector(t2, Math.sin(a) * rr / P.radius).normalize(), 1, r);
+      }
+      return;
+    }
     const loin = d => d.angleTo(Y) * P.radius > 18 && d.angleTo(P.beacon.dir) * P.radius > 13 && (!P.terre || P.terre(d));
     for (let i = 0; i < P.ombrelles; i++) {
       const tirage = () => P.dirAleatoire ? P.dirAleatoire(r) : randomDir(r);

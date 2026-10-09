@@ -2,6 +2,7 @@
 // prisonnier ; la 15e est le Grand Phare, gardé par le boss de la galaxie.
 // Tout est généré à partir d'une graine : une planète est identique à chaque partie.
 import * as THREE from 'three';
+import { planNiveau } from './modules.js';
 
 // Structure (docs/GAMEPLAN.md) : 6 galaxies de 6 niveaux. Niveaux 1 à 3 : parcours d'îles ; 4 : mini-planète ronde ;
 // 5 : niveau défi (court et difficile) ; 6 : le boss, au Grand Phare.
@@ -152,15 +153,19 @@ export function planete(g, i) {
   while (beacon[1] > 0.2) beacon = dir();                 // le phare n'est jamais juste à côté du vaisseau
   const taille = plat ? 34 + Math.round(g * 0.4) : radius;   // taille « jouable » (sert à doser le contenu)
   const R = plat ? 1500 : radius;                          // niveau plat : une planète si grande qu'on ne voit plus la courbure
-  if (plat) { const a = ((defi ? 170 : 240) + (seed % 7) * 12) / R; beacon = [0, Math.cos(a), Math.sin(a)]; }
+  const plan = plat ? planNiveau(g, i, defi) : null;     // niveau-parcours : assemblé à partir de modules (modules.js)
+  if (plan) {                                             // le phare : sur la dernière île du plan (même formule que world.js)
+    const fin = plan.iles[plan.iles.length - 1], a = fin.u / R;
+    beacon = new THREE.Vector3(fin.lat / R, Math.cos(a), Math.sin(a)).normalize().toArray();
+  }
   return {
-    g, i, seed, nom, boss, radius: R, taille, plat, defi, ronde, biome: biome.nom,
+    g, i, seed, nom, boss, radius: R, taille, plat, defi, ronde, plan, biome: biome.nom,
     sol, motif: biome.motif, motifCol: pal.motif, scale: biome.scale, herbe: pal.herbe, decors: biome.decors,
     palette: pal, humeur: hu, forme: biome.mer || biome.nuages || archipel ? 'doux' : forme, archipel, signature: biome.nuages && signature === 'canyon' ? 'jardin' : signature, ressource,
     mer: biome.mer ? 0.35 : 0,                             // niveau de la mer au-dessus du rayon (planète océan)
     nuages: !!biome.nuages, gravite: biome.nuages ? 0.72 : 1,
     beacon, relief: biome.mer ? 1.25 : biome.nuages ? 0.35 : 0.5 + r() * 0.5, freq: 1 + r() * 0.6, bosse: { h: 1.2 + r() * 1.2, w: 0.25 + r() * 0.12 },
-    embers: boss ? 4 : 6 + Math.floor(r() * 3) + Math.floor(taille / 8) + Math.floor(g / 4),
+    embers: plan ? plan.iles.filter(o => o.contenu.cristal).length : boss ? 4 : 6 + Math.floor(r() * 3) + Math.floor(taille / 8) + Math.floor(g / 4),
     ombrelles: boss ? 2 + Math.floor(g / 3) : (defi ? 4 : 0) + Math.min(18, 2 + Math.floor(taille / 5) + Math.floor(g * 0.6)),
     vitesse: 3.4 + g * 0.12,                               // vitesse des Ombrelles (Fanal court à 7,5)
     bossVie: 3 + Math.floor(g / 4),
