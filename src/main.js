@@ -411,13 +411,17 @@ function updatePlayer(dt) {
   S.plane = !!(save && save.pouvoirs && save.pouvoirs.planer) && !S.onGround && !S.nage && vr < 0 && controls.tenu('saut');
   if (S.plane) { vr = Math.max(vr, -2.2); vt.lerp(wish.clone().multiplyScalar(RUN * mag), 1 - Math.exp(-6 * dt)); if (Math.random() < 0.4) burst(S.pos.clone().addScaledVector(up, 0.6), 1, 0x9ff6ff, 1); }
   S.vel.copy(vt).addScaledVector(up, vr);
+  const avantPas = S.pos.clone();
   S.pos.addScaledVector(S.vel, dt);
 
   // sol
   const n = tmp2.copy(S.pos).sub(P.center);
   const dist = n.length(); n.normalize();
   const snap = S.onGround && vr <= 0 ? 0.35 : 0, sol = P.surface(n);
-  if (dist <= sol + snap && !(P.abime && dist < sol - 1.2)) {          // archipel : tombé sous le bord d'une île, on ne remonte pas d'un coup dessus
+  if (P.abime && dist < sol - 1.2 && P.terre(n)) {                    // contre la falaise d'une île : c'est un mur
+    S.pos.copy(avantPas).addScaledVector(up, S.vel.dot(up) * dt);
+    S.vel.copy(up).multiplyScalar(Math.min(0, S.vel.dot(up)));
+  } else if (dist <= sol + snap && !(P.abime && dist < sol - 1.2)) {          // archipel : tombé sous le bord d'une île, on ne remonte pas d'un coup dessus
     S.pos.copy(P.center).addScaledVector(n, sol);
     const vrNow = S.vel.dot(n);
     if (vrNow < 0) S.vel.addScaledVector(n, -vrNow);

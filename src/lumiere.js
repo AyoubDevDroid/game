@@ -36,11 +36,13 @@ const FRAG = /* glsl */`
   vec3 ab = uFanal - uCam;
   float tt = dot(vWP - uCam, ab) / max(dot(ab, ab), 1e-4);
   float hf = dot(vWP - uFanal, normalize(uFanal - uCenter));      // le sol et ce qui est plus bas que ses pieds restent pleins
+#if !PLEIN
   if (tt > 0.02 && tt < 0.9 && hf > -0.45) {
     float k = length(vWP - (uCam + ab * tt)) / (0.35 + 1.9 * tt);
     if (k < 0.72) discard;
     if (k < 1.0 && mod(floor(gl_FragCoord.x) + floor(gl_FragCoord.y), 2.0) < 1.0) discard;   // bord tramé : passage en douceur
   }
+#endif
   vec3 dir = normalize(vWP - uCenter);
   float ang = acos(clamp(dot(dir, uBeacon), -1.0, 1.0));
   float lit = 1.0 - smoothstep(uWave - 0.35, uWave, ang);
@@ -88,8 +90,8 @@ export function uniformsPlanete(center, beaconDir) {
 export function regleVague(U, t) { U.uWave.value = -0.5 + t * (Math.PI + 1.0); }
 
 // motif : 0 aucun, 2 lave, 3 étoiles (l'herbe est peinte dans les couleurs du sol)
-export function allumable(mat, U, { motif = 0, motifCol = 0xffffff, scale = 6, tex = null, roche = null, texScale = 0.12 } = {}) {
-  mat.defines = { ...(mat.defines || {}), MOTIF: motif, TEX: tex ? 1 : 0, ROCHE: tex && roche ? 1 : 0 };   // un programme par motif : on ne calcule que le nécessaire
+export function allumable(mat, U, { motif = 0, motifCol = 0xffffff, scale = 6, tex = null, roche = null, texScale = 0.12, plein = false } = {}) {
+  mat.defines = { ...(mat.defines || {}), MOTIF: motif, TEX: tex ? 1 : 0, ROCHE: tex && roche ? 1 : 0, PLEIN: plein ? 1 : 0 };   // un programme par motif : on ne calcule que le nécessaire
   const extra = { uMotifCol: { value: new THREE.Color(motifCol) }, uScale: { value: scale }, uTexScale: { value: texScale }, ...(tex ? { uTex: { value: tex } } : {}), ...(roche ? { uRoche: { value: roche } } : {}) };
   mat.onBeforeCompile = sh => {
     Object.assign(sh.uniforms, U, extra);

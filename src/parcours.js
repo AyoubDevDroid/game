@@ -149,7 +149,7 @@ export function tracerChemin(ctx) {
   const geo = new THREE.BufferGeometry();
   geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); geo.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
   geo.setIndex(idx); geo.computeVertexNormals();
-  group.add(new THREE.Mesh(geo, allumable(new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide }), U, { tex: peindrePaves(L), texScale: 0.42 })));
+  group.add(new THREE.Mesh(geo, allumable(new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide }), U, { tex: peindrePaves(L), texScale: 0.42, plein: true })));
   // cailloux de bordure
   const caillou = new THREE.IcosahedronGeometry(0.16, 0), nbC = Math.floor(points.length * 1.2);
   const cailloux = new THREE.InstancedMesh(caillou, allumable(new THREE.MeshLambertMaterial({ color: cBord.clone().multiplyScalar(0.85), flatShading: true }), U), nbC);

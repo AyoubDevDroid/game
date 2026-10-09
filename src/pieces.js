@@ -7,8 +7,15 @@ import { rng } from './univers.js';
 
 const Y = new THREE.Vector3(0, 1, 0);
 const partage = g => { g.userData.partage = true; return g; };
-const pieceGeo = partage(new THREE.CylinderGeometry(0.32, 0.32, 0.09, 24).rotateX(Math.PI / 2));
-const pieceMat = new THREE.MeshStandardMaterial({ color: 0xffd23f, emissive: 0xb07a00, emissiveIntensity: 0.45, metalness: 0.55, roughness: 0.28 });
+// une étoile dorée bombée, aux bords biseautés : elle accroche la lumière en tournant
+const pieceGeo = partage((() => {
+  const s = new THREE.Shape();
+  for (let i = 0; i < 10; i++) { const a = Math.PI / 2 + i * Math.PI / 5, r = i % 2 ? 0.16 : 0.36; i ? s.lineTo(Math.cos(a) * r, Math.sin(a) * r) : s.moveTo(Math.cos(a) * r, Math.sin(a) * r); }
+  s.closePath();
+  const g = new THREE.ExtrudeGeometry(s, { depth: 0.06, bevelEnabled: true, bevelThickness: 0.07, bevelSize: 0.06, bevelSegments: 3, curveSegments: 1 });
+  g.center(); g.computeVertexNormals(); return g;
+})());
+const pieceMat = new THREE.MeshStandardMaterial({ color: 0xffcc33, emissive: 0xff9a00, emissiveIntensity: 0.35, metalness: 0.35, roughness: 0.22 });
 pieceMat.userData.partage = true;
 const caisseGeo = partage(new THREE.BoxGeometry(0.9, 0.9, 0.9));
 
@@ -30,15 +37,15 @@ export function installerPieces(planet) {
   const surTerre = d => !P.terre || P.terre(d);
   const hauteurSol = d => {                                        // sur un rocher ? la pièce passe au-dessus
     let h = 0.95;
-    for (const s of P.solides) if (!s.mobile && !s.rebond && s.bas < 0.5 && s.haut < 4 && d.angleTo(s.dir) * R < s.radius + 0.3) h = Math.max(h, s.haut + 0.9);
+    for (const s of P.solides) if (!s.mobile && !s.rebond && s.bas < 0.5 && d.angleTo(s.dir) * R < s.radius + 0.4) { if (s.haut >= 3.2) return -1; h = Math.max(h, s.haut + 0.9); }
     return h;
   };
   const loinDe = d => d.angleTo(Y) * R > 3 && d.angleTo(P.beacon.dir) * R > 3;
-  const poser = (d, abs) => items.push({ pos: d.clone().multiplyScalar(abs).add(P.center), pris: false, vol: null, ph: r() * 6 });
+  const poser = (d, abs) => abs > P.radius - 50 && items.push({ pos: d.clone().multiplyScalar(abs).add(P.center), pris: false, vol: null, ph: r() * 6 });
 
   // 1. le long du chemin
   const pts = (P.parcours && P.parcours.points) || [];
-  for (let i = 2; i < pts.length; i += 3) { const d = pts[i]; if (surTerre(d) && loinDe(d)) poser(d, P.surface(d) + hauteurSol(d)); }
+  for (let i = 2; i < pts.length; i += 3) { const d = pts[i]; if (surTerre(d) && loinDe(d)) { const h = hauteurSol(d); if (h > 0) poser(d, P.surface(d) + h); } }
   // 2. en arc au-dessus des trous : elles montrent la trajectoire du saut
   for (const l of P.liens || []) {
     if (l.secret || l.gap < 2) continue;
@@ -50,11 +57,11 @@ export function installerPieces(planet) {
   // 3. des cercles de pièces, et quelques lignes droites
   for (let c = 0; c < 7; c++) {
     const d = P.freeDir(0.5), t1 = new THREE.Vector3().crossVectors(d, Math.abs(d.y) < 0.9 ? Y : new THREE.Vector3(1, 0, 0)).normalize(), t2 = new THREE.Vector3().crossVectors(d, t1);
-    for (let k = 0; k < 8; k++) { const a = k / 8 * Math.PI * 2, dd = d.clone().addScaledVector(t1, Math.cos(a) * 1.7 / R).addScaledVector(t2, Math.sin(a) * 1.7 / R).normalize(); if (surTerre(dd)) poser(dd, P.surface(dd) + hauteurSol(dd)); }
+    for (let k = 0; k < 8; k++) { const a = k / 8 * Math.PI * 2, dd = d.clone().addScaledVector(t1, Math.cos(a) * 1.7 / R).addScaledVector(t2, Math.sin(a) * 1.7 / R).normalize(); if (surTerre(dd)) { const h = hauteurSol(dd); if (h > 0) poser(dd, P.surface(dd) + h); } }
   }
   for (let c = 0; c < 6; c++) {
     const d = P.freeDir(0.5), cap = new THREE.Vector3().crossVectors(d, new THREE.Vector3().randomDirection()).normalize();
-    for (let k = 0; k < 6; k++) { const dd = d.clone().applyAxisAngle(cap, k * 1.3 / R); if (surTerre(dd)) poser(dd, P.surface(dd) + hauteurSol(dd)); }
+    for (let k = 0; k < 6; k++) { const dd = d.clone().applyAxisAngle(cap, k * 1.3 / R); if (surTerre(dd)) { const h = hauteurSol(dd); if (h > 0) poser(dd, P.surface(dd) + h); } }
   }
   items.splice(220);
   const nbFixes = items.length;
@@ -63,6 +70,7 @@ export function installerPieces(planet) {
   const caisses = [], nbCaisses = Math.min(16, 8 + Math.floor((P.taille || R) / 5));
   for (let k = 0; k < nbCaisses; k++) {
     const d = P.freeDir(0.45), sol = P.surface(d);
+    if (P.solides.some(s => !s.rebond && s.bas < 0.5 && d.angleTo(s.dir) * R < s.radius + 0.7)) continue;   // pas de caisse dans un rocher
     const o = { dir: d.clone(), radius: 0.62, bas: 0, haut: 0.9, caisse: true };
     P.solides.push(o);
     caisses.push({ d, pos: d.clone().multiplyScalar(sol + 0.45).add(P.center), o, casse: false, flamme: r() < 0.2, q: new THREE.Quaternion().setFromUnitVectors(Y, d).multiply(new THREE.Quaternion().setFromAxisAngle(Y, r() * 6.28)) });

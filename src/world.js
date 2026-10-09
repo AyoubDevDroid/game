@@ -268,7 +268,7 @@ export function createPlanet(scene, glow, modeles, L, allume = false, ramasses =
     const a = d.angleTo(bDir);
     if (archi) {                                             // plateaux aux bords en falaise, le reste plonge sous les nuages
       let sv = 0, hi = 0;
-      for (const ile of archi.iles) { const du = d.angleTo(ile.d) * L.radius, v = 1 - THREE.MathUtils.smoothstep(du, ile.rad - 1.4, ile.rad); if (v > sv) { sv = v; hi = ile.h; } }
+      for (const ile of archi.iles) { const du = d.angleTo(ile.d) * L.radius, v = 1 - (L.plat ? THREE.MathUtils.smoothstep(du, ile.rad - 0.25, ile.rad + 0.05) : THREE.MathUtils.smoothstep(du, ile.rad - 1.4, ile.rad)); if (v > sv) { sv = v; hi = ile.h; } }
       return THREE.MathUtils.lerp(L.plat ? -40 : -6, hi + h * 0.25 + L.bosse.h * 0.6 * Math.exp(-((a / (L.bosse.w * k)) ** 2)), sv);
     }
     // océan : une île sous la Luciole (le reste de la planète est plus bas, sous la mer)
@@ -303,8 +303,8 @@ export function createPlanet(scene, glow, modeles, L, allume = false, ramasses =
       const vers = (rho, th) => ile.d.clone().addScaledVector(t1, Math.cos(th) * rho / R).addScaledVector(t2, Math.sin(th) * rho / R).normalize();
       // anneaux : [rayon, hauteur (null = le sol réel), teinte]
       const anneaux = [];
-      for (let i = 0; i <= 12; i++) anneaux.push([(ile.rad - 1.5) * i / 12, null, 'dessus']);
-      anneaux.push([ile.rad - 0.75, ile.h - 0.18, 'bord'], [ile.rad - 0.2, ile.h - 0.7, 'falaise'],
+      for (let i = 0; i <= 12; i++) anneaux.push([(ile.rad - 0.3) * i / 12, null, 'dessus']);
+      anneaux.push([ile.rad - 0.08, ile.h - 0.22, 'bord'], [ile.rad + 0.04, ile.h - 0.8, 'falaise'],
         [ile.rad, ile.h - 2.2, 'falaise'], [ile.rad * 0.97, ile.h - 4, 'falaise'], [ile.rad * 0.86, ile.h - 6, 'dessous'],
         [ile.rad * 0.64, ile.h - 8.4, 'dessous'], [ile.rad * 0.36, ile.h - 10.6, 'dessous'], [0.4, ile.h - 12.5, 'dessous'], [0, ile.h - 13, 'dessous']);
       const base = pos.length / 3;
@@ -357,7 +357,7 @@ export function createPlanet(scene, glow, modeles, L, allume = false, ramasses =
   geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
   geo.computeVertexNormals();
   }
-  const groundMat = allumable(new THREE.MeshLambertMaterial({ vertexColors: true, emissive: 0x000000, side: L.plat ? THREE.DoubleSide : THREE.FrontSide }), U, { motif: L.motif, motifCol: L.motifCol, scale: (L.scale || 6) / k, tex: TEXTURES['sol-' + L.biome.normalize('NFD').replace(/[̀-ͯ]/g, '')] || TEXTURES['sol-tous'] || peindreSol(L), roche: TEXTURES['roche-tous'] || peindreRoche(L) });
+  const groundMat = allumable(new THREE.MeshLambertMaterial({ vertexColors: true, emissive: 0x000000, side: L.plat ? THREE.DoubleSide : THREE.FrontSide }), U, { motif: L.motif, motifCol: L.motifCol, scale: (L.scale || 6) / k, tex: TEXTURES['sol-' + L.biome.normalize('NFD').replace(/[̀-ͯ]/g, '')] || TEXTURES['sol-tous'] || peindreSol(L), roche: TEXTURES['roche-tous'] || peindreRoche(L), plein: true });
   planet.group.add(new THREE.Mesh(geo, groundMat));
 
 
@@ -472,7 +472,7 @@ export function createPlanet(scene, glow, modeles, L, allume = false, ramasses =
   // ---- monde océan : une mer qui recouvre la planète, d'où émergent des îles ----
   if (L.mer) {
     const eau = new THREE.Mesh(new THREE.IcosahedronGeometry(L.radius + L.mer, 6),
-      allumable(new THREE.MeshStandardMaterial({ color: 0x2fb8d9, emissive: 0x0a4a6a, emissiveIntensity: 0.25, roughness: 0.08, metalness: 0.1, transparent: true, opacity: 0.62, depthWrite: false }), U));
+      allumable(new THREE.MeshStandardMaterial({ color: 0x2fb8d9, emissive: 0x0a4a6a, emissiveIntensity: 0.25, roughness: 0.08, metalness: 0.1, transparent: true, opacity: 0.62, depthWrite: false }), U, { plein: true }));
     eau.renderOrder = 2;
     planet.group.add(eau); planet.eau = eau;
   }
@@ -526,7 +526,7 @@ export function createPlanet(scene, glow, modeles, L, allume = false, ramasses =
     const merNuages = L.plat ? R - 22 : R - 1.6;
     planet.abime = L.plat ? R - 14 : R - 2.3;                                   // plus bas que ça : Fanal est tombé dans les nuages
     planet.group.add(new THREE.Mesh(new THREE.IcosahedronGeometry(merNuages, 6),
-      allumable(new THREE.MeshLambertMaterial({ color: 0xf8f4ff, emissive: 0xc8b8ff, emissiveIntensity: 0.2 }), U)));
+      allumable(new THREE.MeshLambertMaterial({ color: 0xf8f4ff, emissive: 0xc8b8ff, emissiveIntensity: 0.2 }), U, { plein: true })));
     // gros flocons sur la mer : du volume
     const np = 1100, pp = new Float32Array(np * 3); let nf = 0;
     for (let t = 0; t < np * 3 && nf < np; t++) {
@@ -596,8 +596,17 @@ export function createPlanet(scene, glow, modeles, L, allume = false, ramasses =
   planet.embers = [];
   let cristalGlb = null;
   for (let i = 0; i < L.embers; i++) {
-    const coin = coins[i], dd = coin ? coin.dir : freeDir(0.55); marquer(dd, 0.3);
-    const hauteur = coin ? coin.h : 0.9;
+    const coin = coins[i]; let dd = coin ? coin.dir.clone() : freeDir(0.55);
+    let hauteur = coin ? coin.h : 0.9;
+    for (let passe = 0; passe < 4; passe++) {            // dans un rocher ? bas : on le pose dessus ; haut : on le pousse à côté
+      const s = planet.solides.find(x => !x.mobile && !x.rebond && !x.caisse && x.bas < 0.5 && x.haut > hauteur - 0.6 && dd.angleTo(x.dir) * L.radius < x.radius + 0.6);
+      if (!s) break;
+      if (s.haut < 3) { hauteur = s.haut + 1; break; }
+      const ecart = dd.clone().sub(s.dir); ecart.addScaledVector(s.dir, -ecart.dot(s.dir));
+      if (ecart.lengthSq() < 1e-10) ecart.copy(new THREE.Vector3().randomDirection().cross(s.dir));
+      dd = s.dir.clone().addScaledVector(ecart.normalize(), (s.radius + 1.3) / L.radius).normalize(); hauteur = 0.9;
+    }
+    marquer(dd, 0.3);
     // le cristal de lumière : facettes taillées, cœur qui palpite, anneau doré, étincelles en orbite, colonne de lumière
     let gem;
     if (modeles['cristal-phare']) {                       // votre cristal 3D (Meshy) à la place des facettes dessinées
