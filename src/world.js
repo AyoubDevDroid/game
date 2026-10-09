@@ -226,7 +226,7 @@ export function createPlanet(scene, glow, modeles, L, allume = false, ramasses =
     let prec = iles[0], n = 0, ci = 0;
     for (let pas = 0; pas < 40 && ci < cibles.length; pas++) {
       const cible = cibles[ci], dernier = ci === cibles.length - 1;
-      const long = n % 2 === 1, gap = long ? 9 + ra() * 3.5 : 3 + ra() * 2.5, rad = 8 + ra() * 4;   // un trou sur deux demande un pont
+      const long = L.defi ? n % 3 !== 0 : n % 2 === 1, gap = long ? 9 + ra() * 3.5 : 3 + ra() * 2.5, rad = 8 + ra() * 4;   // un trou sur deux demande un pont
       const reste = prec.d.angleTo(cible) * R;
       if (dernier && reste < prec.rad + gap + 2 * rad + 13) break;                      // assez près du phare
       if (!dernier && reste < prec.rad + gap + rad) { ci++; continue; }
@@ -641,7 +641,7 @@ export function createPlanet(scene, glow, modeles, L, allume = false, ramasses =
     return { dir: freeDir(0.4), h: 0.9 };
   };
   const prendre = n => { const out = []; for (let i = 0; i < n; i++) out.push(coinsRestants.length ? coinsRestants.shift() : cachette()); return out; };
-  const nbHabitants = L.boss ? 0 : 8 + Math.floor((L.taille || L.radius) / 5);
+  const nbHabitants = L.boss ? 0 : L.defi ? 5 : 8;     // 6 à 10 habitants par niveau (docs/GAMEPLAN.md)
   const coinsCoffres = prendre(L.boss ? 0 : 3), coinsHab = prendre(nbHabitants);
   const coinsFlam = [0, 1, 2, 3].map(() => ({ dir: freeDir(0.3), h: 1.1 }));
   for (const c of [...coinsCoffres, ...coinsHab, ...coinsFlam]) marquer(c.dir, 0.25);

@@ -147,7 +147,7 @@ function message(text, sub = '', ms = 2600) {
 function hud() {
   if (!planet) return;
   $('planete').textContent = planet.nom;
-  $('planeteNum').textContent = `Galaxie ${S.g + 1} · Planète ${S.i + 1} / ${NB_PLANETES}`;
+  $('planeteNum').textContent = `${GALAXIES[S.g].nom} · ${planet.boss ? 'Boss' : planet.defi ? 'Défi' : 'Niveau ' + (S.i + 1)}`;
   const got = planet.embers.filter(e => e.taken).length;
   $('braises').textContent = planet.lit ? '✓' : `${got} / ${planet.embers.length}`;
   const res = planet.ressources;
@@ -578,11 +578,13 @@ function updateGame(dt) {
         message('Le dernier Grand Phare brille !', '', 2600);
       } else {
         save.debloquee = Math.max(save.debloquee, S.g + 1); setTimeout(() => astuce('galaxie'), 4600);
+        setTimeout(() => ecranFin(true), 5200);
         message(`${GALAXIES[S.g].nom} est libérée !`, `Remonte dans la Luciole : cap sur ${GALAXIES[S.g + 1].nom} 🚀`, 4500);
       }
     } else {
       if (gardien) { gardien.liberer(); save.gardiens++; }
-      message('Phare rallumé !', 'Le petit gardien est libre 🧡', 3000);
+      message('Phare rallumé !', 'Le petit gardien est libre 🧡', 2600);
+      setTimeout(() => ecranFin(), 3200);
     }
     sauver(save);
     hud();
@@ -607,6 +609,23 @@ function chute() {
   S.vies--; hud();
   if (S.vies <= 0) reprendre(); else message('Plouf dans les nuages !', 'Fanal perd une flamme', 1300);
 }
+// fin de niveau : le bilan de ce qu'on a trouvé, puis on choisit de repartir ou d'explorer encore
+function ecranFin(galaxie = false) {
+  if (S.state !== 'jeu' || !planet) return;
+  const pc = planet.parcours, hab = pc ? pc.habitants : [], cof = pc ? pc.coffres : [];
+  const libres = hab.filter(x => x.libre).length, ouverts = cof.filter(c => c.ouvert).length;
+  const etoile = S.mission && S.mission.faite;
+  $('finTitre').textContent = galaxie ? `✨ ${GALAXIES[S.g].nom} est libérée !` : '🏮 Phare rallumé !';
+  $('finBilan').innerHTML = [
+    ['🙋', `${libres} / ${hab.length}`, 'habitants sauvés'], ['✨', S.nbPieces || 0, 'pièces'],
+    ['📜', `${ouverts} / ${cof.length}`, 'coffres'], ['⭐', etoile ? '✓' : '–', 'mission'],
+  ].map(([i, v, t]) => `<div>${i} ${v}<small>${t}</small></div>`).join('');
+  $('finSuite').textContent = galaxie ? 'Galaxie suivante ➜' : 'Niveau suivant ➜';
+  $('finNiveau').hidden = false; S.ecranFin = true; controls.setActif(false); sfx.victory();
+}
+$('finRester').onclick = () => { $('finNiveau').hidden = true; S.ecranFin = false; controls.setActif(true); };
+$('finSuite').onclick = () => { $('finNiveau').hidden = true; S.ecranFin = false; decoller(); };
+
 function reprendre() {
   S.vel.set(0, 0, 0); S.invuln = 2.5;                                // plus rien ne peut le toucher pendant le fondu
   fondu(true);
@@ -911,7 +930,7 @@ function frame(now) {
   let dt = Math.min(1 / 30, raw);
   if (S.gel > 0) { S.gel -= raw; dt = 0.0001; }                 // arrêt sur image après un gros coup
   clock += dt;
-  const enJeu = S.state === 'jeu' && !dialogue.ouvert && !S.journal;          // pendant un dialogue ou le journal, le jeu attend
+  const enJeu = S.state === 'jeu' && !dialogue.ouvert && !S.journal && !S.ecranFin;          // pendant un dialogue ou le journal, le jeu attend
   dialogue.update(dt);
   if (enJeu) {
     S.time += dt; updatePlayer(dt); updateGame(dt); updateParcours(dt);

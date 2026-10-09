@@ -41,6 +41,9 @@
   #dlgTexte{font-size:17px;line-height:1.45;color:#fff;font-weight:600;min-height:2.9em}
   #dialogue i{font-style:normal;color:#ffe9b8;animation:flotte 1s ease-in-out infinite;margin-left:auto}
   #journal{justify-content:flex-start;overflow-y:auto}
+  .bilan{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;max-width:680px}
+  .bilan div{background:rgba(255,255,255,.08);border-radius:16px;padding:12px 18px;min-width:120px;font-weight:800;font-size:22px}
+  .bilan small{display:block;font-size:13px;color:#cfc8ff;font-weight:700;margin-top:4px}
   #journal h2{font-size:26px}
   #journalListe{max-width:640px;text-align:left;display:flex;flex-direction:column;gap:12px;padding-left:0;list-style:none}
   #journalListe li{background:rgba(255,255,255,.07);border-radius:14px;padding:12px 16px}
@@ -138,6 +141,15 @@
   <div id="journalStats" class="mut"></div>
   <ol id="journalListe"></ol>
   <button class="btn petit" id="fermerJournal">Fermer</button>
+</section>
+<!-- fin de niveau : le bilan, puis on repart -->
+<section class="ecran" id="finNiveau" hidden>
+  <h2 id="finTitre">🏮 Phare rallumé !</h2>
+  <div id="finBilan" class="bilan"></div>
+  <div style="display:flex;gap:14px;flex-wrap:wrap;justify-content:center">
+    <button class="btn petit" id="finRester" style="background:linear-gradient(135deg,#bfe0ff,#8fb8ff);box-shadow:0 6px 0 #4a6fb0">Explorer encore</button>
+    <button class="btn" id="finSuite">Niveau suivant ➜</button>
+  </div>
 </section>
 <button class="btn petit" id="embarquer" hidden>🚀 Embarquer</button>
 <div id="bossBarre" hidden>👑 GRANDE OMBRELLE<div><div id="bossVie"></div></div></div>

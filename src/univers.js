@@ -3,29 +3,22 @@
 // Tout est généré à partir d'une graine : une planète est identique à chaque partie.
 import * as THREE from 'three';
 
-export const NB_GALAXIES = 15, NB_PLANETES = 15;
-export const BOSS_REQUIS = 8;            // phares à rallumer dans la galaxie pour ouvrir le Grand Phare
-export const OUVERTES_AU_DEPART = 3;     // chaque phare rallumé ouvre une planète de plus
+// Structure (docs/GAMEPLAN.md) : 6 galaxies de 6 niveaux. Niveaux 1 à 3 : parcours d'îles ; 4 : mini-planète ronde ;
+// 5 : niveau défi (court et difficile) ; 6 : le boss, au Grand Phare.
+export const NB_GALAXIES = 6, NB_PLANETES = 6;
+export const BOSS_REQUIS = 4;            // niveaux 1 à 4 rallumés pour ouvrir le boss
+export const OUVERTES_AU_DEPART = 1;     // chaque phare rallumé ouvre le niveau suivant
 
 export function rng(seed) { let s = (seed * 9301 + 49297) % 233280; return () => ((s = (s * 9301 + 49297) % 233280) / 233280); }
 
 // ciel : [bas, milieu, haut]
 export const GALAXIES = [
-  { nom: 'Archipel du Ciel',      ciel: [0xff70ae, 0x5c2bc7, 0x1c0d4f] },
-  { nom: 'Nébuleuse Framboise',   ciel: [0xff8a9a, 0xb0246a, 0x2d0a2e] },
-  { nom: 'Spirale Menthe',        ciel: [0x9af2cc, 0x2a8f8a, 0x0b2a33] },
-  { nom: 'Voile d\'Ambre',        ciel: [0xffc46b, 0xc2552a, 0x3a1020] },
-  { nom: 'Nuée Lagon',            ciel: [0x8feaff, 0x2b6fd6, 0x0d1747] },
-  { nom: 'Couronne de Givre',     ciel: [0xe8fbff, 0x7aa7e6, 0x1b2550] },
-  { nom: 'Jardin des Comètes',    ciel: [0xd4ff7a, 0x3f9a5a, 0x0e2a24] },
-  { nom: 'Mer de Lucioles',       ciel: [0xffe066, 0x4a3fa0, 0x0c0b30] },
-  { nom: 'Anneau Mandarine',      ciel: [0xffad66, 0xd8402f, 0x2e0b1c] },
-  { nom: 'Brume Violette',        ciel: [0xd9b8ff, 0x7a3fd6, 0x1a0a3d] },
-  { nom: 'Ruche d\'Étoiles',      ciel: [0xfff2a8, 0xb07a1f, 0x231405] },
-  { nom: 'Cascade Aurore',        ciel: [0x7cf0c0, 0x8a4fe0, 0x120a35] },
-  { nom: 'Forge Céleste',         ciel: [0xff9b5a, 0x8a1f2c, 0x1a0508] },
-  { nom: 'Abysse Nacré',          ciel: [0xffd0dc, 0x5a7fbf, 0x0a1230] },
-  { nom: 'Cœur de l\'Ombre',      ciel: [0xb48cff, 0x3b1f5c, 0x07020f] },
+  { nom: 'Prairie de Brumelune', ciel: [0xff70ae, 0x5c2bc7, 0x1c0d4f], biomes: ['menthe', 'verdoyance', 'royaume', 'menthe', 'bourg'], ronde: 'menthe' },
+  { nom: 'Forge de Cendrine',    ciel: [0xffad66, 0xd8402f, 0x2e0b1c], biomes: ['lave', 'volcan', 'dunes', 'lave', 'volcan'], ronde: 'volcan' },
+  { nom: 'Couronne de Givre',    ciel: [0xe8fbff, 0x7aa7e6, 0x1b2550], biomes: ['givre', 'fetes', 'givre', 'givre', 'fetes'], ronde: 'fetes' },
+  { nom: 'Abysses Nacrées',      ciel: [0x8feaff, 0x2b6fd6, 0x0d1747], biomes: ['lagon', 'corail', 'pirate', 'lagon', 'corail'], ronde: 'ocean' },
+  { nom: 'Confiserie Étoilée',   ciel: [0xffd0dc, 0xb0246a, 0x2d0a2e], biomes: ['gourmande', 'corail', 'gourmande', 'gourmande', 'corail'], ronde: 'gourmande' },
+  { nom: 'Cœur de l’Orage',     ciel: [0xb48cff, 0x3b1f5c, 0x07020f], biomes: ['étoilée', 'hantee', 'marais', 'étoilée', 'hantee'], ronde: 'nuages' },
 ];
 
 // biomes : couleurs du sol, motif (1 herbe, 2 fissures lumineuses, 3 poussière d'étoiles), décors pour une planète de rayon 9
@@ -136,11 +129,12 @@ function ordreBiomes(g) {
 // une planète : g (0 à 14), i (0 à 14)
 export function planete(g, i) {
   const seed = 1000 + g * 37 + i * 11, r = rng(seed);
-  const boss = i === NB_PLANETES - 1;
-  const biome = BIOMES[ordreBiomes(g)[i % BIOMES.length]];
+  const boss = i === NB_PLANETES - 1, ronde = i === 3, defi = i === 4;
+  const Gx = GALAXIES[g], nomBiome = boss || ronde ? Gx.ronde : Gx.biomes[i];
+  const biome = BIOMES.find(b => b.nom === nomBiome) || BIOMES[0];
   // niveaux plats façon parcours : une suite d'îles flottantes du départ jusqu'au phare (gravité « vers le bas »)
-  const plat = !boss && !biome.mer && !biome.nuages && i % 3 === 1;
-  const archipel = plat || (!boss && !biome.mer && !biome.nuages && i % 5 === 3);   // îles sur une mer de nuages
+  const plat = !boss && !ronde && !biome.mer && !biome.nuages;
+  const archipel = plat;   // îles sur une mer de nuages
   const hu = HUMEURS[g === 0 && i === 0 ? 2 : Math.floor(r() * HUMEURS.length)];
   // teinte principale : celle du biome, décalée librement (une planète de lave peut être rose ou violette)
   const H = teinteDe(biome.sol.base) + (g === 0 && i < 2 ? 0 : (r() - 0.5) * 0.36);
@@ -150,24 +144,24 @@ export function planete(g, i) {
   const signature = SIGNATURES[(i + g * 2 + Math.floor(r() * 3)) % SIGNATURES.length];
   const ressource = RESSOURCES[(i * 3 + g) % RESSOURCES.length];
   const tirer = () => DEBUT[Math.floor(r() * DEBUT.length)] + (r() < 0.5 ? MILIEU[Math.floor(r() * MILIEU.length)] : '') + FIN[Math.floor(r() * FIN.length)];
-  let nom = boss ? 'Le Grand Phare' : g === 0 && i === 0 ? 'Brumelune' : g === 0 && i === 1 ? 'Cendrine' : tirer();
+  let nom = boss ? 'Le Grand Phare' : g === 0 && i === 0 ? 'Brumelune' : g === 1 && i === 0 ? 'Cendrine' : tirer();
   while (/vermin|merd|pute|cul|con[en]|nul/i.test(nom)) nom = tirer();   // pas de nom malheureux
-  const radius = boss ? 22 : biome.nuages ? 18 : Math.round(30 + r() * 8 + g * 0.4);   // de vrais petits mondes à explorer
+  const radius = boss ? 22 : biome.nuages ? 18 : ronde ? 24 : Math.round(30 + r() * 8 + g * 0.4);   // de vrais petits mondes à explorer
   const dir = () => { const u = r() * 2 - 1, a = r() * Math.PI * 2, s = Math.sqrt(1 - u * u); return [s * Math.cos(a), u, s * Math.sin(a)]; };
   let beacon = dir();
   while (beacon[1] > 0.2) beacon = dir();                 // le phare n'est jamais juste à côté du vaisseau
   const taille = plat ? 34 + Math.round(g * 0.4) : radius;   // taille « jouable » (sert à doser le contenu)
   const R = plat ? 1500 : radius;                          // niveau plat : une planète si grande qu'on ne voit plus la courbure
-  if (plat) { const a = (250 + (seed % 7) * 14) / R; beacon = [0, Math.cos(a), Math.sin(a)]; }
+  if (plat) { const a = ((defi ? 170 : 240) + (seed % 7) * 12) / R; beacon = [0, Math.cos(a), Math.sin(a)]; }
   return {
-    g, i, seed, nom, boss, radius: R, taille, plat, biome: biome.nom,
+    g, i, seed, nom, boss, radius: R, taille, plat, defi, ronde, biome: biome.nom,
     sol, motif: biome.motif, motifCol: pal.motif, scale: biome.scale, herbe: pal.herbe, decors: biome.decors,
     palette: pal, humeur: hu, forme: biome.mer || biome.nuages || archipel ? 'doux' : forme, archipel, signature: biome.nuages && signature === 'canyon' ? 'jardin' : signature, ressource,
     mer: biome.mer ? 0.35 : 0,                             // niveau de la mer au-dessus du rayon (planète océan)
     nuages: !!biome.nuages, gravite: biome.nuages ? 0.72 : 1,
     beacon, relief: biome.mer ? 1.25 : biome.nuages ? 0.35 : 0.5 + r() * 0.5, freq: 1 + r() * 0.6, bosse: { h: 1.2 + r() * 1.2, w: 0.25 + r() * 0.12 },
     embers: boss ? 4 : 6 + Math.floor(r() * 3) + Math.floor(taille / 8) + Math.floor(g / 4),
-    ombrelles: boss ? 2 + Math.floor(g / 3) : Math.min(18, 2 + Math.floor(taille / 5) + Math.floor(g * 0.6)),
+    ombrelles: boss ? 2 + Math.floor(g / 3) : (defi ? 4 : 0) + Math.min(18, 2 + Math.floor(taille / 5) + Math.floor(g * 0.6)),
     vitesse: 3.4 + g * 0.12,                               // vitesse des Ombrelles (Fanal court à 7,5)
     bossVie: 3 + Math.floor(g / 4),
     gardien: boss ? null : GARDIENS[Math.floor(r() * GARDIENS.length)],
@@ -177,7 +171,7 @@ export function planete(g, i) {
 }
 
 // ---------- sauvegarde ----------
-const CLE = 'astres_eteints_v2';
+const CLE = 'astres_eteints_v3';          // v3 : nouvelle structure en 6 × 6
 export function lireSauvegarde() {
   try { const s = JSON.parse(localStorage.getItem(CLE)); if (s && s.allumes) return { ressources: {}, ramasse: {}, coffres: {}, liberes: {}, habitants: 0, memoires: 0, ...s }; } catch {}
   return null;
