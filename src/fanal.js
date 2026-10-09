@@ -156,7 +156,7 @@ export function createFanal(glowTexture, modeles = {}, { cadre = 0xd8285f, foula
   const light = new THREE.PointLight(0xffa040, 6, 9, 1.6); light.position.y = 0.9; if (lumiere) g.add(light);
 
   // le perso animé a son propre visage et sa tenue : on ne garde que la lueur de la flamme
-  if (anime) { echarpe.visible = false; pans.forEach(p => (p.visible = false)); flamme.visible = false; halo.position.y = 1.2; light.position.y = 1.2; }
+  if (anime || modeleCorps) { echarpe.visible = false; pans.forEach(p => (p.visible = false)); flamme.visible = false; halo.position.y = 1.5; light.position.y = 1.5; }   // le modèle 3D a sa propre tenue
   const jouer = nom => {
     const a = actions[nom] || actions.course || actions.repos;
     if (!a || a === actuelle) return;

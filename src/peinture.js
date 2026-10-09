@@ -56,42 +56,58 @@ function taches(x, r, couleurs, n, rMin, rMax, alpha) {
 // ---------- les styles de sol ----------
 const STYLES = {
   herbe(x, r, P) {
-    const base = col(P.sol.base), sombre = col(P.sol.base, -0.12, 0.05), clair = col(P.sol.haut, 0.05);
-    fond(x, r, sombre, clair, [4, 8, 16], 1.6);
-    taches(x, r, [col(P.sol.haut, 0.08), col(P.sol.bas, -0.04)], 26, 30, 80, 0.22);
-    // brins : petits coups de pinceau courbes, du sombre au clair
-    x.lineCap = 'round';
-    for (let i = 0; i < 5200; i++) {
-      const px = r() * T, py = r() * T, l = 5 + r() * 9, a = -Math.PI / 2 + (r() - 0.5) * 0.9, t = r();
-      const c = sombre.clone().lerp(clair, t).lerp(base, 0.2);
-      x.strokeStyle = css(c, 0.75); x.lineWidth = 1.4 + r() * 1.6;
-      autour(px, py, 16, (X, Y) => { x.beginPath(); x.moveTo(X, Y); x.quadraticCurveTo(X + Math.cos(a) * l * 0.5 + 2, Y + Math.sin(a) * l * 0.5, X + Math.cos(a) * l, Y + Math.sin(a) * l); x.stroke(); });
-    }
-    // trèfles et petites fleurs
-    for (let i = 0; i < 70; i++) {
-      const px = r() * T, py = r() * T, fl = r() < 0.55, c = fl ? col(P.fleurs[Math.floor(r() * 3)]) : col(P.sol.haut, 0.12), rr = fl ? 2.6 + r() * 1.6 : 3 + r() * 2;
-      autour(px, py, 12, (X, Y) => {
-        for (let k = 0; k < (fl ? 5 : 3); k++) { const a = k / (fl ? 5 : 3) * Math.PI * 2; x.fillStyle = css(c); x.beginPath(); x.arc(X + Math.cos(a) * rr, Y + Math.sin(a) * rr, rr * 0.8, 0, 7); x.fill(); }
-        x.fillStyle = fl ? '#fff3a8' : css(col(P.sol.base, -0.05)); x.beginPath(); x.arc(X, Y, rr * 0.55, 0, 7); x.fill();
+    const base = col(P.sol.base, -0.02, -0.08), sombre = col(P.sol.base, -0.2, -0.05), clair = col(P.sol.haut, 0.06, -0.1), soleil = col(P.sol.haut, 0.14, -0.15);
+    fond(x, r, sombre.clone().lerp(base, 0.5), base.clone().lerp(clair, 0.4), [3, 6, 12, 24], 1.8);
+    taches(x, r, [sombre], 34, 30, 90, 0.28);                      // creux à l'ombre
+    taches(x, r, [soleil], 26, 40, 100, 0.22);                     // coins au soleil
+    x.lineCap = 'round'; x.lineJoin = 'round';
+    // touffes : un éventail de brins, ombre portée, base sombre, pointe claire
+    for (let i = 0; i < 1500; i++) {
+      const px = r() * T, py = r() * T, nb = 5 + Math.floor(r() * 5), L = 7 + r() * 9, t = r();
+      const teinte = sombre.clone().lerp(clair, 0.25 + t * 0.6);
+      autour(px, py, 26, (X, Y) => {
+        x.fillStyle = css(sombre.clone().offsetHSL(0, 0, -0.08), 0.28); x.beginPath(); x.ellipse(X + 2, Y + 1.5, L * 0.55, L * 0.22, 0, 0, 7); x.fill();
+        for (let k = 0; k < nb; k++) {
+          const a = -Math.PI / 2 + (k / (nb - 1) - 0.5) * 1.5 + (r() - 0.5) * 0.25, l = L * (0.65 + r() * 0.45), w = 1.6 + r() * 1.2;
+          const tx = X + Math.cos(a) * l, ty = Y + Math.sin(a) * l, cx = X + Math.cos(a) * l * 0.5 + (a + Math.PI / 2) * 1.5, cy = Y + Math.sin(a) * l * 0.5;
+          x.fillStyle = css(teinte); x.beginPath(); x.moveTo(X - w, Y); x.quadraticCurveTo(cx - w * 0.5, cy, tx, ty); x.quadraticCurveTo(cx + w * 0.5, cy, X + w, Y); x.fill();
+          x.strokeStyle = css(soleil, 0.55); x.lineWidth = 0.7; x.beginPath(); x.moveTo((X + tx) / 2, (Y + ty) / 2); x.quadraticCurveTo(cx * 0.3 + tx * 0.7, cy * 0.3 + ty * 0.7, tx, ty); x.stroke();
+        }
       });
+    }
+    // petites fleurs à cinq pétales, ombrées
+    for (let i = 0; i < 46; i++) {
+      const px = r() * T, py = r() * T, c = col(P.fleurs[Math.floor(r() * 3)], 0, -0.05), rr = 2.4 + r() * 1.4, rot = r() * 6;
+      autour(px, py, 12, (X, Y) => {
+        x.fillStyle = 'rgba(20,40,20,.25)'; x.beginPath(); x.arc(X + 1.5, Y + 1.5, rr * 1.7, 0, 7); x.fill();
+        for (let k = 0; k < 5; k++) { const a = rot + k / 5 * Math.PI * 2; x.fillStyle = css(c); x.beginPath(); x.ellipse(X + Math.cos(a) * rr, Y + Math.sin(a) * rr, rr * 0.85, rr * 0.55, a, 0, 7); x.fill(); }
+        x.fillStyle = 'rgba(255,255,255,.45)'; x.beginPath(); x.arc(X - rr * 0.6, Y - rr * 0.6, rr * 0.45, 0, 7); x.fill();
+        x.fillStyle = '#ffd84a'; x.beginPath(); x.arc(X, Y, rr * 0.5, 0, 7); x.fill();
+      });
+    }
+    for (let i = 0; i < 22; i++) {                                  // cailloux
+      const px = r() * T, py = r() * T, w = 2.5 + r() * 2.5, c = col(P.pierre);
+      autour(px, py, 8, (X, Y) => { x.fillStyle = 'rgba(20,30,20,.3)'; x.beginPath(); x.ellipse(X + 1, Y + 1.2, w, w * 0.7, 0, 0, 7); x.fill(); x.fillStyle = css(c); x.beginPath(); x.ellipse(X, Y, w, w * 0.7, 0, 0, 7); x.fill(); x.fillStyle = 'rgba(255,255,255,.4)'; x.beginPath(); x.ellipse(X - w * 0.3, Y - w * 0.25, w * 0.45, w * 0.25, 0, 0, 7); x.fill(); });
     }
   },
   sable(x, r, P) {
-    const clair = col(P.sol.haut, 0.08), sombre = col(P.sol.base, -0.04);
-    fond(x, r, sombre, clair, [3, 6, 12], 1.3);
-    // ondulations du vent (nombre de vagues entier : raccord parfait)
-    for (let k = 0; k < 18; k++) {
-      const y0 = (k / 18) * T, amp = 5 + r() * 5, ph = r() * 6, freq = 2 + Math.floor(r() * 2);
-      for (const [dy, c, a] of [[0, col(P.sol.haut, 0.15), 0.45], [3, col(P.sol.bas, -0.05), 0.35]]) {
-        x.strokeStyle = css(c, a); x.lineWidth = 2.2; x.beginPath();
-        for (let i = 0; i <= T; i += 4) { const y = y0 + dy + Math.sin(i / T * Math.PI * 2 * freq + ph) * amp; i ? x.lineTo(i, y) : x.moveTo(i, y); }
-        x.stroke();
-      }
+    const clair = col(P.sol.haut, 0.08, -0.08), sombre = col(P.sol.base, -0.06, -0.06), creux = col(P.sol.bas, -0.1, -0.05);
+    fond(x, r, sombre, clair, [3, 6, 12, 24], 1.5);
+    taches(x, r, [creux], 22, 40, 100, 0.2); taches(x, r, [col(P.sol.haut, 0.16)], 18, 40, 100, 0.2);
+    // ondulations du vent : une crête claire au soleil, un creux ombré derrière (nombre de vagues entier : raccord parfait)
+    for (let k = 0; k < 22; k++) {
+      const y0 = (k / 22) * T, amp = 4 + r() * 5, ph = r() * 6, freq = 2 + Math.floor(r() * 2);
+      const ligne = (dy, c, a, w) => { x.strokeStyle = css(c, a); x.lineWidth = w; x.beginPath(); for (let i = 0; i <= T; i += 4) { const y = y0 + dy + Math.sin(i / T * Math.PI * 2 * freq + ph) * amp; i ? x.lineTo(i, y) : x.moveTo(i, y); } x.stroke(); };
+      ligne(4, creux, 0.3, 6); ligne(0, col(P.sol.haut, 0.2), 0.5, 2.4); ligne(1.6, col(P.sol.haut, 0.1), 0.25, 1);
     }
-    for (let i = 0; i < 2500; i++) { const c = r() < 0.5 ? col(P.sol.haut, 0.2) : col(P.sol.bas, -0.1); x.fillStyle = css(c, 0.5); x.fillRect(r() * T, r() * T, 1.5, 1.5); }
-    for (let i = 0; i < 14; i++) {                                  // coquillages et galets
-      const px = r() * T, py = r() * T, c = r() < 0.5 ? col(P.fleurs[0], 0.15) : col(P.pierre);
-      autour(px, py, 10, (X, Y) => { x.fillStyle = css(c); x.beginPath(); x.ellipse(X, Y, 5, 3.5, r() * 3, 0, 7); x.fill(); x.fillStyle = 'rgba(255,255,255,.6)'; x.beginPath(); x.arc(X - 1.5, Y - 1.2, 1.4, 0, 7); x.fill(); });
+    for (let i = 0; i < 4000; i++) { const c = r() < 0.5 ? col(P.sol.haut, 0.22) : creux; x.fillStyle = css(c, 0.45); x.fillRect(r() * T, r() * T, 1.1, 1.1); }
+    for (let i = 0; i < 22; i++) {                                  // coquillages et galets, avec ombre et reflet
+      const px = r() * T, py = r() * T, c = r() < 0.5 ? col(P.fleurs[0], 0.15, -0.1) : col(P.pierre), a = r() * 3, w = 3.5 + r() * 2.5;
+      autour(px, py, 10, (X, Y) => {
+        x.fillStyle = 'rgba(60,40,20,.3)'; x.beginPath(); x.ellipse(X + 1.2, Y + 1.4, w, w * 0.7, a, 0, 7); x.fill();
+        x.fillStyle = css(c); x.beginPath(); x.ellipse(X, Y, w, w * 0.7, a, 0, 7); x.fill();
+        x.fillStyle = 'rgba(255,255,255,.6)'; x.beginPath(); x.ellipse(X - w * 0.3, Y - w * 0.25, w * 0.4, w * 0.22, a, 0, 7); x.fill();
+      });
     }
   },
   neige(x, r, P) {
@@ -170,15 +186,37 @@ function roche(x, r, P) {
   }
 }
 
+// pavés du chemin : pierres arrondies, posées en rangs décalés, joints sombres
+function paves(x, r, P) {
+  const joint = col(P.terre, -0.15, -0.2), pierre = col(P.sol.haut).lerp(new THREE.Color(0xfff2dc), 0.55);
+  x.fillStyle = css(joint); x.fillRect(0, 0, T, T);
+  const rangs = 8, h = T / rangs;
+  for (let j = 0; j < rangs; j++) {
+    const n = 5 + (j % 2), w = T / n, dec = (j % 2) * w / 2;
+    for (let i = 0; i < n; i++) {
+      const cx = i * w + dec + w / 2 + (r() - 0.5) * 6, cy = j * h + h / 2 + (r() - 0.5) * 5, rw = w / 2 - 4 - r() * 3, rh = h / 2 - 4 - r() * 3;
+      const c = pierre.clone().offsetHSL((r() - 0.5) * 0.04, 0, (r() - 0.5) * 0.12);
+      autour(cx, cy, w, (X, Y) => {
+        x.fillStyle = css(joint.clone().offsetHSL(0, 0, -0.1), 0.6); x.beginPath(); x.ellipse(X + 2, Y + 2.5, rw, rh, 0, 0, 7); x.fill();
+        x.fillStyle = css(c); x.beginPath(); x.ellipse(X, Y, rw, rh, 0, 0, 7); x.fill();
+        const g = x.createRadialGradient(X - rw * 0.35, Y - rh * 0.4, 1, X, Y, Math.max(rw, rh));
+        g.addColorStop(0, 'rgba(255,255,255,.45)'); g.addColorStop(0.5, 'rgba(255,255,255,0)'); g.addColorStop(1, 'rgba(60,40,30,.22)');
+        x.fillStyle = g; x.beginPath(); x.ellipse(X, Y, rw, rh, 0, 0, 7); x.fill();
+      });
+    }
+  }
+}
+
 const cache = new Map();
-function peindre(cle, f) {
+function peindre(cle, f, px = 1024) {
   if (cache.has(cle)) return cache.get(cle);
-  const c = document.createElement('canvas'); c.width = c.height = T;
-  f(c.getContext('2d'));
+  const c = document.createElement('canvas'); c.width = c.height = px;
+  const x = c.getContext('2d'); x.scale(px / T, px / T);          // on dessine en 512, rendu en 1024 : plus net
+  f(x);
   const t = new THREE.CanvasTexture(c);
   t.wrapS = t.wrapT = THREE.RepeatWrapping; t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4;
   t.generateMipmaps = true; t.userData.partage = true;
-  if (cache.size > 8) { const [k, v] = cache.entries().next().value; v.dispose(); cache.delete(k); }   // on garde les dernières planètes
+  if (cache.size > 6) { const [k, v] = cache.entries().next().value; v.dispose(); cache.delete(k); }   // on garde les dernières planètes
   cache.set(cle, t);
   return t;
 }
@@ -187,5 +225,8 @@ export function peindreSol(L) {
   return peindre('sol-' + L.seed, x => STYLES[style](x, rng(L.seed * 19 + 7), L.palette));
 }
 export function peindreRoche(L) {
-  return peindre('roche-' + L.seed, x => roche(x, rng(L.seed * 23 + 5), L.palette));
+  return peindre('roche-' + L.seed, x => roche(x, rng(L.seed * 23 + 5), L.palette), 512);
+}
+export function peindrePaves(L) {
+  return peindre('paves-' + L.seed, x => paves(x, rng(L.seed * 31 + 9), L.palette), 512);
 }

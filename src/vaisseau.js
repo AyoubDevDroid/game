@@ -41,7 +41,8 @@ export function createVaisseau(glow, modeles = {}) {
   if (modeles.vaisseau) {
     dessin.visible = false; lueur.visible = false;
     const modele = new THREE.Group();
-    for (const { geo, mat } of morceaux(modeles.vaisseau, 2.2)) modele.add(new THREE.Mesh(geo, mat));
+    for (const { geo, mat } of morceaux(modeles.vaisseau, 3.4)) modele.add(new THREE.Mesh(geo, mat));
+    modele.rotation.x = Math.PI / 2; modele.position.y = 0.9;            // modèle debout (fusée) : on le couche, nez vers l'avant
     coque.add(modele);
     const box = new THREE.Box3().setFromObject(modele);
     feu.position.set(0, (box.min.y + box.max.y) / 2, box.min.z - 0.3);   // le réacteur à l'arrière du modèle

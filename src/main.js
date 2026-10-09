@@ -29,6 +29,7 @@ const canvas = document.getElementById('gl');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 const scene = new THREE.Scene();
+scene.fog = new THREE.Fog(0xbfe6ff, 1e4, 2e4);              // brume au loin : la profondeur du paysage
 const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 1200);
 function resize() { renderer.setSize(innerWidth, innerHeight, false); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); }
 addEventListener('resize', resize); resize();
@@ -38,6 +39,7 @@ const sun = new THREE.DirectionalLight(0xfff0dc, 1.6); sun.position.set(30, 60, 
 const fill = new THREE.DirectionalLight(0xb48cff, 0.6); fill.position.set(-40, -20, -30); scene.add(fill);
 
 const glow = makeGlowTexture();
+const brumeJour = new THREE.Color(0xc4e6ff);
 const sky = createSky(scene, glow);
 const [modeles] = await Promise.all([chargerModeles(), chargerTextures()]);          // modèles .glb de public/modeles (s'il y en a)
 await Promise.all([chargerDecors(), chargerFaune()]);   // objets 3D et animaux des planètes (public/decors, packs CC0)
@@ -857,6 +859,12 @@ function updateCamera(dt, instant = false) {
   const desired = S.pos.clone().addScaledVector(S.up, CAM_HEIGHT * zoom).addScaledVector(S.camHeading, -CAM_DIST * zoom);
   const k = instant ? 1 : 1 - Math.exp(-6 * dt);
   camera.position.lerp(desired, k);
+  // la caméra ne passe jamais sous le sol (collines, falaises, îles) : on la remonte au-dessus
+  const dc = camera.position.clone().sub(planet.center), lc = dc.length(); dc.normalize();
+  if (!planet.terre || planet.terre(dc)) {
+    const mini = planet.surface(dc) + 1.3;
+    if (lc < mini) camera.position.copy(planet.center).addScaledVector(dc, mini);
+  }
   camera.up.lerp(S.up, k).normalize();
   camera.lookAt(S.pos.clone().addScaledVector(S.up, 1.3));
   // tremblement (coups, caisses, chutes) : un petit décalage qui s'éteint vite
@@ -922,6 +930,10 @@ function frame(now) {
   const jour = planet && S.state !== 'cosmos' ? 0.55 + 0.45 * planet.litT : 0;
   sky.jour(jour, S.state === 'cosmos' ? null : S.up);
   sun.intensity = 1.6 + jour * 0.9; hemi.intensity = 1.35 + jour * 0.35;
+  if (planet && S.state !== 'cosmos') {
+    scene.fog.color.set(planet.palette ? planet.palette.ciel[0] : 0xbfe6ff).lerp(brumeJour, jour);
+    scene.fog.near = planet.plat ? 55 : 40; scene.fog.far = planet.plat ? 300 : 230;
+  } else { scene.fog.near = 1e4; scene.fog.far = 2e4; }
   // transparence entre la caméra et Fanal (désactivée hors du jeu, pour les cinématiques)
   if (planet) {
     const voir = S.state === 'jeu' && !S.camLibre;

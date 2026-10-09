@@ -49,6 +49,10 @@ const FRAG = /* glsl */`
   vec3 w = pow(abs(nW), vec3(4.0)); w /= w.x + w.y + w.z;
   vec3 pp = (vWP - uCenter) * uTexScale;
   vec3 tc = texture2D(uTex, pp.zy).rgb * w.x + texture2D(uTex, pp.xz).rgb * w.y + texture2D(uTex, pp.xy).rgb * w.z;
+  vec3 pq = pp * 0.37 + 0.31;                            // la même texture plus grande, mélangée : on ne voit plus la répétition
+  vec3 tc2 = texture2D(uTex, pq.zy).rgb * w.x + texture2D(uTex, pq.xz).rgb * w.y + texture2D(uTex, pq.xy).rgb * w.z;
+  tc = mix(tc, tc2, 0.33);
+  tc *= 0.86 + 0.28 * vn((vWP - uCenter) * 0.045);       // grandes variations de teinte, à l'échelle du paysage
 #if ROCHE                                              // falaises et pentes raides : la roche
   float kr = 1.0 - smoothstep(0.5, 0.78, dot(nW, dir));
   if (kr > 0.01) {

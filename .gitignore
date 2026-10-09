@@ -2,3 +2,7 @@ node_modules/
 dist/
 apk/
 cles/
+
+# modèles Meshy d'origine (lourds) : seules les versions compressées vont dans public/modeles
+sources_meshy/
+apercu/

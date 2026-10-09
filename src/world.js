@@ -594,11 +594,17 @@ export function createPlanet(scene, glow, modeles, L, allume = false, ramasses =
 
   // ---- braises : d'abord dans les coins à explorer (sommets, îlots, cachettes), puis ailleurs ----
   planet.embers = [];
+  let cristalGlb = null;
   for (let i = 0; i < L.embers; i++) {
     const coin = coins[i], dd = coin ? coin.dir : freeDir(0.55); marquer(dd, 0.3);
     const hauteur = coin ? coin.h : 0.9;
     // le cristal de lumière : facettes taillées, cœur qui palpite, anneau doré, étincelles en orbite, colonne de lumière
-    const gem = new THREE.Mesh(CRISTAL.facettes, CRISTAL.matFacettes);
+    let gem;
+    if (modeles['cristal-phare']) {                       // votre cristal 3D (Meshy) à la place des facettes dessinées
+      cristalGlb ||= morceaux(modeles['cristal-phare'], 1.25);
+      gem = new THREE.Group();
+      for (const { geo, mat } of cristalGlb) { const m = new THREE.Mesh(geo, mat); m.position.y -= 0.62; gem.add(m); }
+    } else gem = new THREE.Mesh(CRISTAL.facettes, CRISTAL.matFacettes);
     const coeur = new THREE.Mesh(CRISTAL.coeur, CRISTAL.matCoeur);
     const anneau = new THREE.Mesh(CRISTAL.anneau, CRISTAL.matAnneau); anneau.rotation.x = Math.PI / 2.6;
     const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: glow, color: 0xff9a3d, transparent: true, opacity: 0.85, depthWrite: false, blending: THREE.AdditiveBlending }));

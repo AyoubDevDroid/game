@@ -7,6 +7,7 @@
 // selon leur nom — repos (idle), course (run), saut (jump). Voir fanal.js.
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';   // modèles compressés (gltf-transform)
 
 // Liste remplie au démarrage de Vite à partir du dossier public/modeles (voir vite.config.js)
 // eslint-disable-next-line no-undef
@@ -14,6 +15,7 @@ const DISPONIBLES = typeof __MODELES__ !== 'undefined' ? __MODELES__ : [];
 
 export async function chargerModeles() {
   const loader = new GLTFLoader(), out = {};
+  loader.setMeshoptDecoder(MeshoptDecoder);
   await Promise.all(DISPONIBLES.map(n =>
     loader.loadAsync(`./modeles/${n}.glb`).then(g => { g.scene.userData.animations = g.animations; out[n] = g.scene; }).catch(e => console.warn('Modèle illisible :', n, e))));
   return out;
